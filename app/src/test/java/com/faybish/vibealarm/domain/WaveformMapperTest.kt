@@ -162,3 +162,33 @@ class WaveformMapperTest {
         }
     }
 }
+
+/** The rule behind the intensity slider's preview burst. */
+class PeakAmplitudeTest {
+
+    @Test
+    fun `the peak is the loudest vibrate step`() {
+        val pattern = listOf(vibrate(400, 60), pause(900), vibrate(200, 180), pause(300))
+        assertThat(pattern.peakAmplitude).isEqualTo(180)
+    }
+
+    @Test
+    fun `pauses do not count as strength`() {
+        assertThat(listOf(vibrate(100, 40), pause(9_000)).peakAmplitude).isEqualTo(40)
+    }
+
+    /**
+     * A gentle pattern must preview gently even at full intensity — the slider scales the
+     * pattern the user built rather than replacing it with a maximum-strength buzz.
+     */
+    @Test
+    fun `a gentle pattern peaks gently`() {
+        assertThat(listOf(vibrate(400, 60)).peakAmplitude).isLessThan(PatternSegment.MAX_AMPLITUDE)
+    }
+
+    @Test
+    fun `a pattern with no vibration still yields feedback at full strength`() {
+        assertThat(emptyList<PatternSegment>().peakAmplitude).isEqualTo(PatternSegment.MAX_AMPLITUDE)
+        assertThat(listOf(pause(500)).peakAmplitude).isEqualTo(PatternSegment.MAX_AMPLITUDE)
+    }
+}

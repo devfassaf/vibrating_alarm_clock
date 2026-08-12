@@ -3,6 +3,7 @@ package com.faybish.vibealarm.ui.alarms
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.faybish.vibealarm.AppGraph
+import com.faybish.vibealarm.alarm.PreviewEngine
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.ScheduleCodec
 import com.faybish.vibealarm.data.VibrationPatternEntity
@@ -25,6 +26,17 @@ class AlarmListViewModel : ViewModel() {
 
     private val repository = AppGraph.repository
     private val scheduler = AppGraph.scheduler
+
+    /**
+     * Previews for the volume and intensity sliders. Held here so it is torn down with
+     * the screen: a preview left running would keep the vibrator going and would leave
+     * the user's alarm stream volume where this engine put it.
+     */
+    private val preview = PreviewEngine(
+        context = AppGraph.deviceProtectedContext,
+        scope = viewModelScope,
+        logger = AppGraph.reliabilityLogger,
+    )
 
     val alarms: StateFlow<List<AlarmEntity>> = repository.observeAlarms()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -93,5 +105,26 @@ class AlarmListViewModel : ViewModel() {
 
     fun delete(alarmId: Long) {
         viewModelScope.launch { scheduler.onAlarmDeleted(alarmId) }
+    }
+
+    /** Feels the alarm's own pattern at the currently chosen intensity. */
+    fun previewVibration(alarm: AlarmEntity) {
+        viewModelScope.launch {
+            preview.previewVibration(
+                segments = repository.segmentsForAlarm(alarm),
+                intensityScale = alarm.intensityScale,
+                forcePwmEmulation = AppGraph.settings.forcePwmEmulation,
+            )
+        }
+    }
+
+    /** Plays the alarm's own ringtone at the currently chosen volume. */
+    fun previewSound(alarm: AlarmEntity) {
+        preview.previewSound(alarm.ringtoneUri, alarm.volume)
+    }
+
+    override fun onCleared() {
+        preview.stop()
+        super.onCleared()
     }
 }

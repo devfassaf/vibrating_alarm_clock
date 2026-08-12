@@ -46,6 +46,7 @@ import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
 import com.faybish.vibealarm.ui.components.LabeledRow
 import com.faybish.vibealarm.ui.components.OptionChips
+import com.faybish.vibealarm.ui.components.PercentSlider
 import com.faybish.vibealarm.ui.format.currentLocale
 import com.faybish.vibealarm.ui.format.formatTime
 import com.faybish.vibealarm.ui.format.scheduleSummaryText
@@ -72,6 +73,8 @@ fun AlarmCard(
     onAlarmChange: (AlarmEntity) -> Unit,
     onScheduleChange: (Schedule) -> Unit,
     onPickPattern: () -> Unit,
+    onPreviewVibration: () -> Unit,
+    onPreviewSound: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var showTimePicker by remember { mutableStateOf(false) }
@@ -155,10 +158,10 @@ fun AlarmCard(
                         onClick = onPickPattern,
                     )
 
-                    IntensitySlider(alarm, onAlarmChange)
+                    IntensitySlider(alarm, onAlarmChange, onPreviewVibration)
 
                     if (alarm.mode == RingMode.SOUND) {
-                        SoundSettings(alarm, onAlarmChange)
+                        SoundSettings(alarm, onAlarmChange, onPreviewSound)
                     }
 
                     SnoozeSettings(alarm, onAlarmChange)
@@ -267,24 +270,43 @@ private fun RingModeSelector(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit
 }
 
 @Composable
-private fun IntensitySlider(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) {
-    com.faybish.vibealarm.ui.components.PercentSlider(
+private fun IntensitySlider(
+    alarm: AlarmEntity,
+    onChange: (AlarmEntity) -> Unit,
+    onPreview: () -> Unit,
+) {
+    PercentSlider(
         title = stringResource(R.string.field_vibration_intensity),
         value = alarm.intensityScale,
         valueRange = 0.1f..1f,
         onValueChange = { onChange(alarm.copy(intensityScale = it)) },
+        onPreview = onPreview,
     )
 }
 
 @Composable
-private fun SoundSettings(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) {
+private fun SoundSettings(
+    alarm: AlarmEntity,
+    onChange: (AlarmEntity) -> Unit,
+    onPreview: () -> Unit,
+) {
     Column {
-        com.faybish.vibealarm.ui.components.PercentSlider(
+        RingtonePickerRow(
+            currentUri = alarm.ringtoneUri,
+            onPicked = { onChange(alarm.copy(ringtoneUri = it)) },
+        )
+        Text(
+            text = stringResource(R.string.field_ringtone_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        PercentSlider(
             title = stringResource(R.string.field_volume),
             value = alarm.volume,
             valueRange = 0f..1f,
             onValueChange = { onChange(alarm.copy(volume = it)) },
             leadingIcon = Icons.Filled.MusicNote,
+            onPreview = onPreview,
         )
         com.faybish.vibealarm.ui.components.SwitchRow(
             title = stringResource(R.string.field_vibrate_with_sound),

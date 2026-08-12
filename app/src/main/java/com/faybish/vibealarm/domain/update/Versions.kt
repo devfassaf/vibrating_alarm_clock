@@ -15,7 +15,9 @@ object Versions {
      * remove any of them, and a single one makes the regex below fail — which reads as
      * "no update available" rather than as an error.
      */
-    private val INVISIBLE = Regex("[‎‏‪-‮⁦-⁩​-‍﻿]")
+    private val INVISIBLE = Regex(
+        "[\\u200e\\u200f\\u202a-\\u202e\\u2066-\\u2069\\u200b-\\u200d\\ufeff]",
+    )
 
     private val THREE_PART = Regex("""^v?(\d+)\.(\d+)\.(\d+)""")
     private val EXACTLY_THREE_PART = Regex("""^v?\d+\.\d+\.\d+$""")

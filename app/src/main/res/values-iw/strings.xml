@@ -52,6 +52,9 @@
     <string name="field_ring_mode">סוג התרעה</string>
     <string name="field_vibration_pattern">תבנית רטט</string>
     <string name="field_vibration_intensity">עוצמת רטט</string>
+    <string name="field_ringtone">צלצול ההשכמה</string>
+    <string name="field_ringtone_hint">צלצול שנבחר מהאחסון שלכם עלול לא להיות נגיש אחרי ריסט עד שפותחים את הנעילה; אז מושמע צלצול ברירת המחדל של המערכת. הרטט תמיד עובד.</string>
+    <string name="ringtone_default">צלצול ברירת המחדל</string>
     <string name="field_volume">עוצמת צליל</string>
     <string name="field_vibrate_with_sound">גם רטט</string>
     <string name="field_auto_silence">משך צלצול</string>

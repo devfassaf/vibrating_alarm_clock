@@ -26,3 +26,16 @@ enum class SegmentType { VIBRATE, PAUSE }
 /** Total wall time the pattern takes to play once. */
 val List<PatternSegment>.totalDurationMs: Long
     get() = sumOf { it.durationMs }
+
+/**
+ * The strongest vibration this pattern asks for, which is what a single-burst preview
+ * should feel like: a gentle pattern must preview gently even at full intensity, because
+ * the intensity slider scales the pattern rather than replacing it.
+ *
+ * Falls back to full strength for a pattern with no vibration in it, so a preview always
+ * gives some feedback instead of silently doing nothing.
+ */
+val List<PatternSegment>.peakAmplitude: Int
+    get() = filter { it.type == SegmentType.VIBRATE }
+        .maxOfOrNull { it.amplitude }
+        ?: PatternSegment.MAX_AMPLITUDE

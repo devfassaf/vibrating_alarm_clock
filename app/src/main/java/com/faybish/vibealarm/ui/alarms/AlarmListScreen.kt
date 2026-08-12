@@ -11,7 +11,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.HealthAndSafety
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -82,7 +82,7 @@ fun AlarmListScreen(
                         Icon(Icons.Filled.Vibration, stringResource(R.string.title_patterns))
                     }
                     IconButton(onClick = onOpenReliability) {
-                        Icon(Icons.Filled.HealthAndSafety, stringResource(R.string.title_reliability))
+                        Icon(Icons.Filled.Shield, stringResource(R.string.title_reliability))
                     }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Filled.Settings, stringResource(R.string.title_settings))
@@ -92,8 +92,13 @@ fun AlarmListScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(onClick = { showTimePicker = true }) {
-                Icon(Icons.Filled.Add, stringResource(R.string.action_add_alarm))
+            // Hidden while a card is open: an expanded card is a form, and the button
+            // floats exactly over its last rows — including the preview buttons. Google
+            // Clock hides it for the same reason.
+            if (expandedId == null) {
+                FloatingActionButton(onClick = { showTimePicker = true }) {
+                    Icon(Icons.Filled.Add, stringResource(R.string.action_add_alarm))
+                }
             }
         },
     ) { padding ->
@@ -126,6 +131,8 @@ fun AlarmListScreen(
                         onAlarmChange = viewModel::save,
                         onScheduleChange = { viewModel.updateSchedule(alarm, it) },
                         onPickPattern = { onPickPatternFor(alarm.id) },
+                        onPreviewVibration = { viewModel.previewVibration(alarm) },
+                        onPreviewSound = { viewModel.previewSound(alarm) },
                         onDelete = {
                             expandedId = null
                             viewModel.delete(alarm.id)

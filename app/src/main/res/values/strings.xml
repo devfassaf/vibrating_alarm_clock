@@ -52,6 +52,9 @@
     <string name="field_ring_mode">Alert</string>
     <string name="field_vibration_pattern">Vibration pattern</string>
     <string name="field_vibration_intensity">Vibration intensity</string>
+    <string name="field_ringtone">Alarm sound</string>
+    <string name="field_ringtone_hint">A sound you pick from your own storage may be unreadable after a restart until the phone is unlocked; the system default is used then. Vibration always works.</string>
+    <string name="ringtone_default">Default alarm sound</string>
     <string name="field_volume">Volume</string>
     <string name="field_vibrate_with_sound">Vibrate as well</string>
     <string name="field_auto_silence">Ring for</string>
