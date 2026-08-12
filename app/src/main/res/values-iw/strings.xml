@@ -82,12 +82,10 @@
     <string name="schedule_weekend">סוף שבוע</string>
     <string name="schedule_no_days">לא נבחרו ימים</string>
     <string name="schedule_no_dates">אין עדיין תאריכים</string>
-    <string name="schedule_dates_from">מ-%1$s · %2$d תאריכים</string>
     <string name="per_day_times_title">שעה לכל יום</string>
     <string name="per_day_times_hint">הקישו על יום כדי לתת לו שעה משלו, למשל שני ב-7:00 ושלישי ב-8:00 באותה השכמה.</string>
 
     <!-- Patterns -->
-    <string name="pattern_summary">%1$d מקטעים · %2$s</string>
     <string name="pattern_in_use">התבנית בשימוש של השכמה קיימת, ולכן אי אפשר למחוק אותה.</string>
     <string name="pattern_copied_from_preset">השמירה יוצרת עותק שלך; התבנית המובנית נשארת ללא שינוי.</string>
     <string name="pattern_no_amplitude_control">הטלפון הזה לא יכול לשנות את עוצמת הרטט, ולכן העוצמה מדומה בעזרת פולסים קצרים.</string>
@@ -99,10 +97,8 @@
     <!-- Recorder -->
     <string name="recorder_instructions">לחצו והחזיקו כדי לרטוט, שחררו להפסקה. משך ההחזקה קובע את האורך, וגובה הלחיצה קובע את העוצמה.</string>
     <string name="recorder_pad_idle">לחצו והחזיקו כאן</string>
-    <string name="recorder_pad_active">הוקלטו %1$d מקטעים</string>
 
     <!-- Reliability -->
-    <string name="reliability_banner_title">%1$d בעיות עלולות למנוע השכמה</string>
     <string name="reliability_banner_hint">הקישו כדי לראות מה צריך לתקן.</string>
     <string name="check_exact_alarms">אזעקות מדויקות</string>
     <string name="check_exact_alarms_description">בלי זה ההשכמה עלולה להתעכב או לא לפעול בכלל.</string>
@@ -145,7 +141,6 @@
     <!-- Notifications -->
     <string name="notification_firing_text">השכמה</string>
     <string name="notification_snoozed_until">נודניק עד %1$s</string>
-    <string name="notification_snoozed_until_remaining">נודניק עד %1$s · נשארו %2$d</string>
     <string name="notification_missed_title">השכמה הוחמצה</string>
     <string name="notification_missed_text">%1$s הייתה מיועדת ל-%2$s</string>
 
@@ -155,4 +150,30 @@
     <string name="pattern_preset_sos">SOS</string>
     <string name="pattern_preset_waves">גלים</string>
     <string name="pattern_preset_escalating">מתגברת</string>
+
+    <plurals name="schedule_dates_from">
+        <item quantity="one">מ-%1$s · תאריך אחד</item>
+        <item quantity="two">מ-%1$s · שני תאריכים</item>
+        <item quantity="other">מ-%1$s · %2$d תאריכים</item>
+    </plurals>
+    <plurals name="pattern_summary">
+        <item quantity="one">מקטע אחד · %2$s</item>
+        <item quantity="two">שני מקטעים · %2$s</item>
+        <item quantity="other">%1$d מקטעים · %2$s</item>
+    </plurals>
+    <plurals name="recorder_pad_active">
+        <item quantity="one">הוקלט מקטע אחד</item>
+        <item quantity="two">הוקלטו שני מקטעים</item>
+        <item quantity="other">הוקלטו %1$d מקטעים</item>
+    </plurals>
+    <plurals name="reliability_banner_title">
+        <item quantity="one">בעיה אחת עלולה למנוע השכמה</item>
+        <item quantity="two">שתי בעיות עלולות למנוע השכמה</item>
+        <item quantity="other">%1$d בעיות עלולות למנוע השכמה</item>
+    </plurals>
+    <plurals name="notification_snoozed_until_remaining">
+        <item quantity="one">נודניק עד %1$s · נשאר אחד</item>
+        <item quantity="two">נודניק עד %1$s · נשארו שניים</item>
+        <item quantity="other">נודניק עד %1$s · נשארו %2$d</item>
+    </plurals>
 </resources>

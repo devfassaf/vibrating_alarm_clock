@@ -30,6 +30,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -85,7 +86,7 @@ fun ReliabilityBanner(onOpenReliability: () -> Unit, modifier: Modifier = Modifi
             )
             Column(modifier = Modifier.padding(start = 12.dp)) {
                 Text(
-                    text = stringResource(R.string.reliability_banner_title, problemCount),
+                    text = pluralStringResource(R.plurals.reliability_banner_title, problemCount, problemCount),
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )

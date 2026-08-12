@@ -36,6 +36,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.faybish.vibealarm.R
@@ -133,8 +134,9 @@ private fun PatternRow(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        text = stringResource(
-                            R.string.pattern_summary,
+                        text = pluralStringResource(
+                            R.plurals.pattern_summary,
+                            segments.size,
                             segments.size,
                             formatDurationMs(totalMs),
                         ),

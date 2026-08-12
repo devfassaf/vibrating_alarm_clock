@@ -3,7 +3,7 @@ package com.faybish.vibealarm.alarm
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
+import androidx.core.net.toUri
 import com.faybish.vibealarm.AlarmActivity
 import com.faybish.vibealarm.MainActivity
 
@@ -35,8 +35,8 @@ object AlarmIntents {
     private fun requestCode(alarmId: Long, offset: Int): Int =
         (alarmId.toInt() * REQUEST_STRIDE) + offset
 
-    private fun dataUri(alarmId: Long, suffix: String): Uri =
-        Uri.parse("vibealarm://alarm/$alarmId/$suffix")
+    private fun dataUri(alarmId: Long, suffix: String) =
+        "vibealarm://alarm/$alarmId/$suffix".toUri()
 
     /** The exact-alarm trigger. Cancelling this cancels the alarm. */
     fun firePendingIntent(context: Context, alarmId: Long, instanceId: Long): PendingIntent {

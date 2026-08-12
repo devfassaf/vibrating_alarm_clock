@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.faybish.vibealarm.R
@@ -127,10 +128,15 @@ fun RecorderPadScreen(
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = stringResource(
-                        if (presses.isEmpty()) R.string.recorder_pad_idle else R.string.recorder_pad_active,
-                        presses.size,
-                    ),
+                    text = if (presses.isEmpty()) {
+                        stringResource(R.string.recorder_pad_idle)
+                    } else {
+                        pluralStringResource(
+                            R.plurals.recorder_pad_active,
+                            presses.size,
+                            presses.size,
+                        )
+                    },
                     style = MaterialTheme.typography.titleMedium,
                     textAlign = TextAlign.Center,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

@@ -6,6 +6,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
@@ -70,8 +71,9 @@ fun scheduleSummaryText(schedule: Schedule): String {
 
         is ScheduleSummary.DateCount -> when {
             summary.count == 0 -> stringResource(R.string.schedule_no_dates)
-            summary.first != null -> stringResource(
-                R.string.schedule_dates_from,
+            summary.first != null -> pluralStringResource(
+                R.plurals.schedule_dates_from,
+                summary.count,
                 DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
                     .format(summary.first),
                 summary.count,

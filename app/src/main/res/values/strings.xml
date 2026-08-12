@@ -82,12 +82,10 @@
     <string name="schedule_weekend">Weekend</string>
     <string name="schedule_no_days">No days selected</string>
     <string name="schedule_no_dates">No dates yet</string>
-    <string name="schedule_dates_from">From %1$s · %2$d dates</string>
     <string name="per_day_times_title">Time per day</string>
     <string name="per_day_times_hint">Tap a day to give it its own time, e.g. Monday 07:00 and Tuesday 08:00 in the same alarm.</string>
 
     <!-- Patterns -->
-    <string name="pattern_summary">%1$d steps · %2$s</string>
     <string name="pattern_in_use">This pattern is used by an alarm, so it cannot be deleted.</string>
     <string name="pattern_copied_from_preset">Saving creates your own copy; the built-in pattern stays unchanged.</string>
     <string name="pattern_no_amplitude_control">This phone cannot vary vibration strength, so intensity is emulated with short pulses.</string>
@@ -99,10 +97,8 @@
     <!-- Recorder -->
     <string name="recorder_instructions">Press and hold to vibrate, release for a pause. How long you hold sets the length; how high up you press sets the strength.</string>
     <string name="recorder_pad_idle">Press and hold here</string>
-    <string name="recorder_pad_active">%1$d steps recorded</string>
 
     <!-- Reliability -->
-    <string name="reliability_banner_title">%1$d issues could stop an alarm</string>
     <string name="reliability_banner_hint">Tap to see what needs fixing.</string>
     <string name="check_exact_alarms">Exact alarms</string>
     <string name="check_exact_alarms_description">Without this the alarm may be delayed or skipped entirely.</string>
@@ -145,7 +141,6 @@
     <!-- Notifications -->
     <string name="notification_firing_text">Alarm</string>
     <string name="notification_snoozed_until">Snoozed until %1$s</string>
-    <string name="notification_snoozed_until_remaining">Snoozed until %1$s · %2$d left</string>
     <string name="notification_missed_title">Missed alarm</string>
     <string name="notification_missed_text">%1$s was due at %2$s</string>
 
@@ -155,4 +150,25 @@
     <string name="pattern_preset_sos">SOS</string>
     <string name="pattern_preset_waves">Waves</string>
     <string name="pattern_preset_escalating">Escalating</string>
+
+    <plurals name="schedule_dates_from">
+        <item quantity="one">From %1$s · %2$d date</item>
+        <item quantity="other">From %1$s · %2$d dates</item>
+    </plurals>
+    <plurals name="pattern_summary">
+        <item quantity="one">%1$d step · %2$s</item>
+        <item quantity="other">%1$d steps · %2$s</item>
+    </plurals>
+    <plurals name="recorder_pad_active">
+        <item quantity="one">%1$d step recorded</item>
+        <item quantity="other">%1$d steps recorded</item>
+    </plurals>
+    <plurals name="reliability_banner_title">
+        <item quantity="one">%1$d issue could stop an alarm</item>
+        <item quantity="other">%1$d issues could stop an alarm</item>
+    </plurals>
+    <plurals name="notification_snoozed_until_remaining">
+        <item quantity="one">Snoozed until %1$s · %2$d left</item>
+        <item quantity="other">Snoozed until %1$s · %2$d left</item>
+    </plurals>
 </resources>

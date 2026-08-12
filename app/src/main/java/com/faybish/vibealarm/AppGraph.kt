@@ -1,5 +1,6 @@
 package com.faybish.vibealarm
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.util.Log
 import androidx.annotation.VisibleForTesting
@@ -24,6 +25,7 @@ import kotlinx.coroutines.launch
  * depend on credential-encrypted storage — which is unavailable after a reboot
  * until the user unlocks the phone, the exact scenario this app must survive.
  */
+@SuppressLint("StaticFieldLeak") // Application-scoped by design: never an Activity context.
 object AppGraph {
 
     lateinit var deviceProtectedContext: Context

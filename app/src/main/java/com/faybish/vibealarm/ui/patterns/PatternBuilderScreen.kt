@@ -40,6 +40,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.faybish.vibealarm.R
@@ -109,8 +110,9 @@ fun PatternBuilderScreen(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        text = stringResource(
-                            R.string.pattern_summary,
+                        text = pluralStringResource(
+                            R.plurals.pattern_summary,
+                            draft.segments.size,
                             draft.segments.size,
                             formatDurationMs(draft.totalMs),
                         ),

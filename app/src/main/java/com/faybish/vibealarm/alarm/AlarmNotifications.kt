@@ -128,7 +128,12 @@ class AlarmNotifications(private val context: Context) {
         val text = if (remaining == null) {
             context.getString(R.string.notification_snoozed_until, time)
         } else {
-            context.getString(R.string.notification_snoozed_until_remaining, time, remaining)
+            context.resources.getQuantityString(
+                R.plurals.notification_snoozed_until_remaining,
+                remaining,
+                time,
+                remaining,
+            )
         }
         val notification = Notification.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(R.drawable.ic_alarm_notification)
