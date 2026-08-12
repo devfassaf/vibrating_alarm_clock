@@ -197,5 +197,10 @@
     <string name="update_problem_permission">Android needs permission to install apps from this app. Grant "Install unknown apps" and try again.</string>
     <string name="update_problem_install">The installer could not be started.</string>
     <string name="setting_check_update">Check for an update</string>
+    <string name="setting_open_site">App home page</string>
+    <string name="setting_share_app">Share the app</string>
+    <string name="setting_share_subject">Vibrating alarm clock — wake up without waking anyone</string>
+    <string name="setting_no_browser">No browser is available to open the page.</string>
+    <string name="setting_no_share_target">No app is available to share with.</string>
     <string name="setting_version">Version %1$s</string>
 </resources>

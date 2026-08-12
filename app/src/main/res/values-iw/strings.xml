@@ -202,5 +202,10 @@
     <string name="update_problem_permission">אנדרואיד צריכה הרשאה להתקין אפליקציות מהאפליקציה הזו. אשרו "התקנת אפליקציות לא מוכרות" ונסו שוב.</string>
     <string name="update_problem_install">לא הצלחתי להפעיל את מתקין החבילות.</string>
     <string name="setting_check_update">בדיקת עדכון</string>
+    <string name="setting_open_site">אתר הבית של האפליקציה</string>
+    <string name="setting_share_app">שיתוף האפליקציה</string>
+    <string name="setting_share_subject">שעון מעורר רוטט — להתעורר בלי להעיר אף אחד</string>
+    <string name="setting_no_browser">אין דפדפן זמין לפתיחת הדף.</string>
+    <string name="setting_no_share_target">אין אפליקציה שאפשר לשתף איתה.</string>
     <string name="setting_version">גרסה %1$s</string>
 </resources>
