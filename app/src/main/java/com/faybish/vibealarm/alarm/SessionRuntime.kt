@@ -16,7 +16,6 @@ import com.faybish.vibealarm.domain.SessionPhase
 import com.faybish.vibealarm.domain.SessionState
 import java.time.Duration
 import java.time.Instant
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /**
@@ -34,14 +33,6 @@ class SessionRuntime(
     private val notifications: AlarmNotifications,
     private val logger: ReliabilityLogger,
 ) {
-
-    /**
-     * Serializes every transition. Effects are ordered on purpose — the instance row
-     * is written before AlarmManager is touched — and the row is read-modify-written
-     * whole, so two transitions running at once would clobber each other and could
-     * demote a live ring back to snoozed.
-     */
-    private val mutex = Mutex()
 
     /** Sink for the effects that need a live vibrator/player. */
     interface OutputSink {
@@ -79,11 +70,16 @@ class SessionRuntime(
         event: SessionEvent,
         sink: OutputSink,
         instanceIdHint: Long = 0,
-    ): SessionState? = mutex.withLock {
+    ): SessionState? = scheduler.mutex.withLock {
         handleLocked(alarmId, event, sink, instanceIdHint)
     }
 
-    private suspend fun handleLocked(
+    /**
+     * Assumes [AlarmScheduler.mutex] is held. Every transition reads the instance row
+     * and writes it back whole, so two running at once would clobber each other — and
+     * a Resume landing on a live ring would demote it back to snoozed.
+     */
+    internal suspend fun handleLocked(
         alarmId: Long,
         event: SessionEvent,
         sink: OutputSink,
@@ -163,7 +159,7 @@ class SessionRuntime(
             }
 
             SessionEffect.ScheduleNextOccurrence ->
-                scheduler.scheduleNextOccurrence(alarm, afterFiring = true)
+                scheduler.scheduleNextOccurrenceLocked(alarm, afterFiring = true)
 
             is SessionEffect.ReportMissed -> {
                 logger.log(ReliabilityLogger.MISSED, "alarm=${alarm.id} at=${effect.occurrence}")
@@ -177,11 +173,14 @@ class SessionRuntime(
      * Re-arms or re-fires every chain that was mid-flight, e.g. after a reboot
      * (including one that happened before the user unlocked the phone).
      */
-    suspend fun resumeAll() {
+    suspend fun resumeAll() = scheduler.mutex.withLock { resumeAllLocked() }
+
+    /** Assumes [AlarmScheduler.mutex] is held. */
+    internal suspend fun resumeAllLocked() {
         val now = Instant.now()
         val sink = ServiceControlSink()
         for (instance in repository.allActiveInstances()) {
-            handle(instance.alarmId, SessionEvent.Resume(now), sink, instanceIdHint = instance.id)
+            handleLocked(instance.alarmId, SessionEvent.Resume(now), sink, instanceIdHint = instance.id)
         }
     }
 
@@ -189,12 +188,12 @@ class SessionRuntime(
      * Ends any other alarm's active chain so a single session is alerting at a
      * time (there is only one vibrator). Mirrors Google Clock's behavior.
      */
-    suspend fun preemptOthers(exceptAlarmId: Long, sink: OutputSink) {
+    suspend fun preemptOthers(exceptAlarmId: Long, sink: OutputSink) = scheduler.mutex.withLock {
         val now = Instant.now()
         for (instance in repository.allActiveInstances()) {
             if (instance.alarmId == exceptAlarmId) continue
             if (instance.state != InstanceState.FIRING) continue
-            handle(instance.alarmId, SessionEvent.Preempted(now), sink, instanceIdHint = instance.id)
+            handleLocked(instance.alarmId, SessionEvent.Preempted(now), sink, instanceIdHint = instance.id)
         }
     }
 

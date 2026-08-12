@@ -15,6 +15,8 @@ import com.faybish.vibealarm.domain.Schedule
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Owns every interaction with [AlarmManager].
@@ -37,6 +39,21 @@ class AlarmScheduler(
     private val alarmManager: AlarmManager =
         context.getSystemService(AlarmManager::class.java)
 
+    /**
+     * Serializes everything that reads-then-writes an alarm's instance row, shared
+     * with [SessionRuntime].
+     *
+     * Two paths legitimately arm at the same time — the boot receiver and the app
+     * opening, for instance — and `scheduleNextOccurrence` clears the old instance
+     * before inserting the new one. Run concurrently, both inserted, leaving two
+     * live instances for one alarm: the armed trigger carries one id while lookups
+     * could return the other, and the orphan then reported itself missed forever.
+     *
+     * Public entry points take the lock; the `*Locked` variants assume it is held,
+     * because a Kotlin Mutex is not reentrant.
+     */
+    internal val mutex = Mutex()
+
     fun canScheduleExactAlarms(): Boolean =
         Build.VERSION.SDK_INT < Build.VERSION_CODES.S || alarmManager.canScheduleExactAlarms()
 
@@ -45,7 +62,9 @@ class AlarmScheduler(
      * chains that were mid-flight, arms the next occurrence of every other
      * enabled alarm, and cancels triggers for disabled ones.
      */
-    suspend fun armAll(runtime: SessionRuntime) {
+    suspend fun armAll(runtime: SessionRuntime) = mutex.withLock { armAllLocked(runtime) }
+
+    private suspend fun armAllLocked(runtime: SessionRuntime) {
         repository.pruneOldInstances()
 
         if (!canScheduleExactAlarms()) {
@@ -53,11 +72,11 @@ class AlarmScheduler(
             return
         }
 
-        runtime.resumeAll()
+        runtime.resumeAllLocked()
 
         val enabled = repository.getEnabledAlarms()
         for (alarm in enabled) {
-            if (repository.activeInstance(alarm.id) == null) scheduleNextOccurrence(alarm)
+            if (repository.activeInstance(alarm.id) == null) scheduleNextOccurrenceLocked(alarm)
         }
 
         val enabledIds = enabled.map { it.id }.toSet()
@@ -72,7 +91,13 @@ class AlarmScheduler(
      * @param afterFiring true when called at the end of a ring/snooze chain. A
      *   one-time alarm disables itself then instead of rolling over to tomorrow.
      */
-    suspend fun scheduleNextOccurrence(alarm: AlarmEntity, afterFiring: Boolean = false) {
+    suspend fun scheduleNextOccurrence(alarm: AlarmEntity, afterFiring: Boolean = false) =
+        mutex.withLock { scheduleNextOccurrenceLocked(alarm, afterFiring) }
+
+    internal suspend fun scheduleNextOccurrenceLocked(
+        alarm: AlarmEntity,
+        afterFiring: Boolean = false,
+    ) {
         if (afterFiring && alarm.scheduleType == ScheduleType.ONE_TIME) {
             disable(alarm.id, "one-time alarm consumed")
             return
@@ -121,21 +146,21 @@ class AlarmScheduler(
         }
     }
 
-    suspend fun onAlarmSaved(alarm: AlarmEntity) {
+    suspend fun onAlarmSaved(alarm: AlarmEntity) = mutex.withLock {
         cancel(alarm.id)
         repository.clearActiveInstance(alarm.id)
-        if (alarm.enabled) scheduleNextOccurrence(alarm)
+        if (alarm.enabled) scheduleNextOccurrenceLocked(alarm)
     }
 
-    suspend fun onAlarmDeleted(alarmId: Long) {
+    suspend fun onAlarmDeleted(alarmId: Long) = mutex.withLock {
         cancel(alarmId)
         repository.deleteAlarm(alarmId)
     }
 
-    suspend fun onAlarmToggled(alarmId: Long, enabled: Boolean) {
+    suspend fun onAlarmToggled(alarmId: Long, enabled: Boolean) = mutex.withLock {
         repository.setAlarmEnabled(alarmId, enabled)
         cancel(alarmId)
-        if (enabled) repository.getAlarm(alarmId)?.let { scheduleNextOccurrence(it) }
+        if (enabled) repository.getAlarm(alarmId)?.let { scheduleNextOccurrenceLocked(it) }
     }
 
     private suspend fun disable(alarmId: Long, reason: String) {

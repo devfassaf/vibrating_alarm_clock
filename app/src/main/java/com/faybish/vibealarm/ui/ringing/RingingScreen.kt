@@ -12,7 +12,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlarmOff
 import androidx.compose.material.icons.filled.Snooze
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -25,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,6 +54,10 @@ fun RingingScreen(
 ) {
     val background = alarm?.let { Color(it.backgroundColorArgb) }
         ?: MaterialTheme.colorScheme.background
+    // The background is user-chosen, so the text colour has to be derived from it
+    // rather than taken from the theme — otherwise the clock can end up dark on dark
+    // and the alarm screen is unreadable at 6am.
+    val foreground = if (background.luminance() > 0.5f) Color.Black else Color.White
 
     val formatter = remember { DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT) }
     val now by produceState(initialValue = LocalTime.now()) {
@@ -60,7 +67,7 @@ fun RingingScreen(
         }
     }
 
-    Surface(modifier = Modifier.fillMaxSize(), color = background) {
+    Surface(modifier = Modifier.fillMaxSize(), color = background, contentColor = foreground) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -91,7 +98,12 @@ fun RingingScreen(
                     .padding(bottom = 48.dp),
                 horizontalArrangement = Arrangement.SpaceEvenly,
             ) {
-                OutlinedButton(onClick = onSnooze, modifier = Modifier.height(72.dp)) {
+                OutlinedButton(
+                    onClick = onSnooze,
+                    modifier = Modifier.height(72.dp),
+                    border = BorderStroke(1.dp, foreground.copy(alpha = 0.6f)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = foreground),
+                ) {
                     Icon(Icons.Filled.Snooze, contentDescription = null, Modifier.size(28.dp))
                     Text(
                         text = stringResource(R.string.action_snooze),

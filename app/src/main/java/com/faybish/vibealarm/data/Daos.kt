@@ -55,10 +55,10 @@ interface PatternDao {
 
 @Dao
 interface InstanceDao {
-    @Query("SELECT * FROM instances WHERE alarmId = :alarmId AND state != 3 LIMIT 1")
+    @Query("SELECT * FROM instances WHERE alarmId = :alarmId AND state != 3 ORDER BY id DESC LIMIT 1")
     suspend fun getActiveForAlarm(alarmId: Long): AlarmInstanceEntity?
 
-    @Query("SELECT * FROM instances WHERE alarmId = :alarmId AND state != 3 LIMIT 1")
+    @Query("SELECT * FROM instances WHERE alarmId = :alarmId AND state != 3 ORDER BY id DESC LIMIT 1")
     fun observeActiveForAlarm(alarmId: Long): Flow<AlarmInstanceEntity?>
 
     @Query("SELECT * FROM instances WHERE state != 3")

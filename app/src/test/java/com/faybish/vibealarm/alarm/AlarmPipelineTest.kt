@@ -6,6 +6,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.data.AlarmInstanceEntity
 import com.faybish.vibealarm.data.AlarmRepository
 import com.faybish.vibealarm.data.AppDb
 import com.faybish.vibealarm.data.EndedReason
@@ -22,6 +23,9 @@ import java.time.LocalTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Before
@@ -291,6 +295,51 @@ class AlarmPipelineTest {
             if (armed.dayOfWeek == DayOfWeek.TUESDAY) LocalTime.of(8, 0) else LocalTime.of(7, 0),
         )
         assertThat(scheduledAlarms()).hasSize(1)
+    }
+
+    /**
+     * Found on a device: opening the app and the boot receiver both re-armed at the
+     * same moment, and `scheduleNextOccurrence` clears the old instance before
+     * inserting the new one. Interleaved, both inserted — leaving two live instances
+     * for one alarm, with the armed trigger carrying one id while lookups returned the
+     * other. The orphan then reported itself missed on every later re-arm.
+     */
+    @Test
+    fun `concurrent re-arming leaves exactly one live instance`() = runBlocking {
+        val alarm = createAlarm(vibrateOnlyAlarm())
+
+        val jobs = List(8) { index ->
+            launch(Dispatchers.Default) {
+                if (index % 2 == 0) {
+                    scheduler.armAll(runtime)
+                } else {
+                    scheduler.onAlarmSaved(repository.getAlarm(alarm.id)!!)
+                }
+            }
+        }
+        jobs.joinAll()
+
+        val live = repository.allActiveInstances().filter { it.alarmId == alarm.id }
+        assertThat(live).hasSize(1)
+        assertThat(scheduledAlarms()).hasSize(1)
+        assertThat(scheduledAlarms().single().triggerAtTime)
+            .isEqualTo(live.single().nextActionEpochMillis)
+    }
+
+    /** Belt and braces: if a stray duplicate ever exists, the newest row must win. */
+    @Test
+    fun `the active instance lookup is deterministic when duplicates exist`() = runTest {
+        val alarm = createAlarm(vibrateOnlyAlarm())
+        val occurrence = repository.activeInstance(alarm.id)!!.occurrenceEpochMillis
+        val strayId = repository.saveInstance(
+            AlarmInstanceEntity(
+                alarmId = alarm.id,
+                occurrenceEpochMillis = occurrence,
+                state = InstanceState.SCHEDULED,
+                nextActionEpochMillis = occurrence,
+            ),
+        )
+        assertThat(repository.activeInstance(alarm.id)!!.id).isEqualTo(strayId)
     }
 
     // --- Recovery ---
