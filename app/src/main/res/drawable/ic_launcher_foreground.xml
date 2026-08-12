@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Alarm clock with vibration waves on both sides. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- clock face -->
+    <path
+        android:pathData="M54,38 a16,16 0 1,1 -0.02,0 z"
+        android:strokeColor="#A8C7FA"
+        android:strokeWidth="4.5"
+        android:fillColor="#00000000" />
+    <!-- hands: pointing to 12 and 2 -->
+    <path
+        android:pathData="M54,54 L54,44 M54,54 L60.5,57.5"
+        android:strokeColor="#A8C7FA"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- alarm bells feet -->
+    <path
+        android:pathData="M42.5,40.5 L38,36 M65.5,40.5 L70,36"
+        android:strokeColor="#A8C7FA"
+        android:strokeWidth="4.5"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <!-- vibration arcs, left and right -->
+    <path
+        android:pathData="M30,44 a24,24 0 0,0 0,20"
+        android:strokeColor="#7FCFA6"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M24,40 a32,32 0 0,0 0,28"
+        android:strokeColor="#7FCFA6"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M78,44 a24,24 0 0,1 0,20"
+        android:strokeColor="#7FCFA6"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+    <path
+        android:pathData="M84,40 a32,32 0 0,1 0,28"
+        android:strokeColor="#7FCFA6"
+        android:strokeWidth="4"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000" />
+</vector>
