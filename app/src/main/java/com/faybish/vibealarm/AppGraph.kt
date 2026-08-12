@@ -8,9 +8,13 @@ import com.faybish.vibealarm.alarm.AlarmNotifications
 import com.faybish.vibealarm.alarm.AlarmScheduler
 import com.faybish.vibealarm.alarm.SessionRuntime
 import com.faybish.vibealarm.data.AlarmRepository
+import com.faybish.vibealarm.data.DataStoreUpdateStore
 import com.faybish.vibealarm.data.AppDb
 import com.faybish.vibealarm.data.ReliabilityLogger
 import com.faybish.vibealarm.data.SettingsStore
+import com.faybish.vibealarm.domain.update.ReleaseSource
+import com.faybish.vibealarm.domain.update.UpdateStore
+import com.faybish.vibealarm.update.GitHubReleaseSource
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -56,6 +60,8 @@ object AppGraph {
     private var notificationsOrNull: AlarmNotifications? = null
     private var schedulerOrNull: AlarmScheduler? = null
     private var runtimeOrNull: SessionRuntime? = null
+    private var updateStoreOrNull: UpdateStore? = null
+    private var releaseSourceOrNull: ReleaseSource? = null
 
     val db: AppDb
         get() = dbOrNull ?: AppDb.build(deviceProtectedContext).also { dbOrNull = it }
@@ -87,6 +93,17 @@ object AppGraph {
             notifications,
             reliabilityLogger,
         ).also { runtimeOrNull = it }
+
+    /** The updater's persisted state, alongside the app's other settings. */
+    val updateStore: UpdateStore
+        get() = updateStoreOrNull ?: DataStoreUpdateStore(settings).also { updateStoreOrNull = it }
+
+    /** Where releases are read from. Swapped for a fake in tests. */
+    var releaseSource: ReleaseSource
+        get() = releaseSourceOrNull ?: GitHubReleaseSource().also { releaseSourceOrNull = it }
+        @VisibleForTesting set(value) {
+            releaseSourceOrNull = value
+        }
 
     /**
      * Called from [App.onCreate], which runs before any component in the process —
@@ -122,6 +139,8 @@ object AppGraph {
         notificationsOrNull = null
         schedulerOrNull = null
         runtimeOrNull = null
+        updateStoreOrNull = null
+        releaseSourceOrNull = null
         deviceProtectedContext = app.createDeviceProtectedStorageContext()
         notifications.ensureChannels()
     }

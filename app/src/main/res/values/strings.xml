@@ -171,4 +171,28 @@
         <item quantity="one">Snoozed until %1$s · %2$d left</item>
         <item quantity="other">Snoozed until %1$s · %2$d left</item>
     </plurals>
+
+    <!-- In-app updater -->
+    <string name="update_checking">Checking for an update…</string>
+    <string name="update_up_to_date">The app is up to date</string>
+    <string name="update_installed_version">Installed version: %1$s</string>
+    <string name="update_available_title">Version %1$s is available</string>
+    <string name="update_whats_new">What\'s new</string>
+    <string name="update_no_notes">No details were published for this version.</string>
+    <string name="update_size_mb">Download size: %1$.1f MB</string>
+    <string name="update_action_install">Update</string>
+    <string name="update_action_later">Not now</string>
+    <string name="update_action_skip">Skip this version</string>
+    <string name="update_downloading">Downloading version %1$s…</string>
+    <string name="update_downloaded_of">%1$.1f of %2$.1f MB</string>
+    <string name="update_postponed_title">Version %1$s is available</string>
+    <string name="update_postponed_body">An alarm is due within the next half hour, so the update is not offered now — installing replaces the app. It will be offered the next time you open the app.</string>
+    <string name="update_problem_title">The update did not go through</string>
+    <string name="update_problem_network">Could not reach GitHub. Check the connection and try again.</string>
+    <string name="update_problem_download">The download failed. Try again later.</string>
+    <string name="update_problem_truncated">The downloaded file was incomplete, so it was discarded rather than installed. Try again.</string>
+    <string name="update_problem_permission">Android needs permission to install apps from this app. Grant "Install unknown apps" and try again.</string>
+    <string name="update_problem_install">The installer could not be started.</string>
+    <string name="setting_check_update">Check for an update</string>
+    <string name="setting_version">Version %1$s</string>
 </resources>

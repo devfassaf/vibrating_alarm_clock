@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>שעון מעורר רוטט — להתעורר בלי להעיר אף אחד</title>
+  <meta name="description" content="שעון מעורר לאנדרואיד שמעיר ברטט בתבנית שאתם בונים, נעצר מעצמו וחוזר לנודניק — בלי לגעת בטלפון." />
+  <style>
+    :root { --brand: #6f8cff; --brand-dark: #4f6ae0; --ink: #10131a; --paper: #f7f8fc;
+            --muted: #5d6478; --card: #ffffff; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, "Segoe UI", "Noto Sans Hebrew", sans-serif;
+           color: var(--ink); line-height: 1.75; background: var(--paper); }
+    header { background: linear-gradient(140deg, #1b2030 0%, #3b4a80 55%, #6f8cff 100%);
+             color: #fff; text-align: center; padding: 60px 20px 52px; }
+    header .logo { font-size: 66px; line-height: 1; }
+    header h1 { margin: 10px 0 6px; font-size: 32px; }
+    header p { margin: 0 auto; max-width: 30ch; font-size: 18px; opacity: .93; }
+    main { max-width: 760px; margin: 0 auto; padding: 28px 22px 60px; }
+    h2 { color: var(--brand-dark); margin-top: 36px; }
+    ul { padding-inline-start: 22px; }
+    .card { background: var(--card); border-radius: 16px; padding: 18px 22px; margin: 16px 0;
+            box-shadow: 0 4px 16px rgba(16,19,26,.07); }
+    a { color: var(--brand-dark); }
+    footer { text-align: center; color: var(--muted); font-size: 14px; padding: 26px; }
+    .dl { text-align: center; margin: -32px auto 8px; max-width: 760px; padding: 0 22px; }
+    .dl-btn { display: inline-block; background: var(--brand); color: #fff; text-decoration: none;
+              font-size: 21px; font-weight: 700; padding: 16px 40px; border-radius: 999px;
+              box-shadow: 0 8px 22px rgba(111,140,255,.4); }
+    .dl-btn:hover { background: var(--brand-dark); }
+    .dl-meta { color: var(--muted); font-size: 14px; margin-top: 10px; }
+    .steps { counter-reset: s; list-style: none; padding-inline-start: 0; }
+    .steps li { counter-increment: s; position: relative; padding-inline-start: 42px; margin: 14px 0; }
+    .steps li::before { content: counter(s); position: absolute; inset-inline-start: 0; top: 2px;
+      width: 28px; height: 28px; border-radius: 50%; background: var(--brand); color: #fff;
+      font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 15px; }
+    .note { background: #fff6e5; border-inline-start: 4px solid #f0b429; border-radius: 10px;
+            padding: 12px 16px; margin: 14px 0; font-size: 15px; }
+    .lead { background: #eef2ff; border-inline-start: 4px solid var(--brand); border-radius: 10px;
+            padding: 14px 18px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">⏰</div>
+    <h1>שעון מעורר רוטט</h1>
+    <p>להתעורר ברטט — בלי להעיר את כל הבית, ובלי לגעת בטלפון</p>
+  </header>
+
+  <div class="dl">
+    <div class="card">
+      <!-- /releases/latest/download/<asset> is a GitHub redirect straight to the file in
+           the NEWEST release: no repo page, no JavaScript, no API call and no rate limit.
+           It resolves by EXACT asset name, which is why release.sh uploads a version-less
+           vibealarm.apk alongside the versioned one. UpdateContractTest pins the pair. -->
+      <a class="dl-btn" href="https://github.com/devfassaf/vibrating_alarm_clock/releases/latest/download/vibealarm.apk">⬇️ הורדה לאנדרואיד</a>
+      <div class="dl-meta">חינם וקוד פתוח • אנדרואיד 8 ומעלה</div>
+      <div class="dl-meta">
+        תמיד הגרסה העדכנית ביותר ·
+        <a href="https://github.com/devfassaf/vibrating_alarm_clock/releases">כל הגרסאות</a>
+      </div>
+    </div>
+  </div>
+
+  <main>
+    <p class="lead">
+      השעון המעורר המובנה באנדרואיד מרטיט דקה שלמה ברצף, ודורש שתיגעו בטלפון כדי
+      להשתיק אותו. שני הדברים לא מתאימים למי שרוצה לקום בשקט — ובשבת גם לא אפשריים.
+      <b>שעון מעורר רוטט</b> מנגן תבנית רטט שאתם בונים, פעם אחת, נעצר מעצמו, עובר
+      לנודניק ולבסוף נכבה — הכול בלי מגע אחד.
+    </p>
+
+    <h2>מה מיוחד בו</h2>
+    <div class="card">
+      <ul>
+        <li><b>אתם בונים את הרטט.</b> בונה מקטעים ויזואלי — אורך ועוצמה לכל רטט
+            ולכל הפסקה — או פשוט מקישים את הקצב על המסך והאפליקציה הופכת אותו
+            לתבנית. יש גם כפתור בדיקה שמנגן בדיוק מה שיעיר אתכם.</li>
+        <li><b>נעצר לבד, ממשיך לבד.</b> התבנית מתנגנת פעם אחת, ואז נודניק אוטומטי
+            כמה פעמים שהגדרתם — ואם לא הגבתם, ההשכמה מסתיימת בשקט מעצמה.</li>
+        <li><b>המסך יכול להישאר חשוך.</b> הגדרה פר-השכמה: לא נדלק כלום, רק רטט.</li>
+        <li><b>תזמון גמיש.</b> חד-פעמי, שבועי — כולל שעה שונה לכל יום באותה השכמה
+            (שני ב-7:00, שלישי ב-8:00) — או רשימת תאריכים.</li>
+        <li><b>עובד גם אחרי ריסט בלילה.</b> גם אם הטלפון אותחל ולא הוזן קוד הנעילה,
+            ההשכמה עדיין תפעל. זה נבדק בפועל, לא רק בתיאוריה.</li>
+        <li><b>מסך אמינות.</b> בודק כל הרשאה והגדרה שעלולה להשתיק השכמה, ומוביל
+            בלחיצה לדף שמתקן. כולל בדיקת ריסט אמיתית.</li>
+        <li><b>עברית ואנגלית</b>, ואפשר גם מצב צליל רגיל אם רוצים.</li>
+      </ul>
+    </div>
+
+    <h2>למי זה מיועד</h2>
+    <div class="card">
+      <p>
+        למי שישן לצד מישהו אחר, למי שקם לפני כולם בבית, ולשומרי שבת — שצריכים
+        להתעורר בבוקר שבת בלי להעיר את המשפחה ובלי לגעת בטלפון. האפליקציה נבנתה
+        סביב התרחיש הזה: <b>אפס אינטראקציה נדרשת, בשום שלב</b>.
+      </p>
+    </div>
+
+    <h2 id="install">איך מתקינים? (2 דקות)</h2>
+    <div class="card">
+      <p>
+        האפליקציה לא מופצת דרך חנות Play אלא כקובץ התקנה ישיר. ההורדה עצמה אורכת
+        שניות; רוב הזמן הולך על האישורים שאנדרואיד מבקשת בדרך, וזה נורמלי לכל
+        אפליקציה שלא הותקנה מהחנות.
+      </p>
+      <ol class="steps">
+        <li>לוחצים על <b>⬇️ הורדה לאנדרואיד</b> למעלה — תמיד הגרסה העדכנית.</li>
+        <li>Chrome ישאל אם להמשיך כי <b>"קבצים מסוג זה עלולים להזיק למכשיר"</b> —
+            זו הודעה גנרית לכל קובץ התקנה. בוחרים <b>הורדה בכל זאת</b>.</li>
+        <li>פותחים את הקובץ. בפעם הראשונה אנדרואיד תבקש להרשות
+            <b>התקנה ממקורות לא ידועים</b> — מאשרים וחוזרים אחורה.</li>
+        <li><b>Play Protect</b> יסרוק את הקובץ ואז יציג "אפליקציה לא מוכרת" —
+            בוחרים <b>התקן בכל זאת</b>.</li>
+        <li>פותחים את האפליקציה ונכנסים ל<b>מסך האמינות</b>. זה הצעד החשוב: הוא
+            מראה בדיוק מה חסר כדי שההשכמה לא תתפספס.</li>
+      </ol>
+      <div class="note">
+        <b>אם יש לכם סמסונג</b> — חשוב במיוחד: בטיפול במכשיר → סוללה, ודאו
+        שהאפליקציה לא נכנסת לרשימת "אפליקציות ישנות". העברה למצב שינה מבטלת כל
+        השכמה מתוזמנת, ואף אפליקציה לא יכולה לזהות את זה בעצמה. מסך האמינות
+        מסביר את הצעד הזה.
+      </div>
+      <div class="note">
+        <b>עדכונים.</b> אחרי ההתקנה אין צורך לחזור לכאן: האפליקציה בודקת בכל
+        פתיחה אם יש גרסה חדשה, מציגה מה חדש ושואלת אם לעדכן. אם יש השכמה בחצי
+        השעה הקרובה היא לא תציע — התקנה מחליפה את האפליקציה, וזה לא הרגע.
+      </div>
+    </div>
+
+    <h2>פרטיות</h2>
+    <div class="card">
+      <p>
+        האפליקציה לא אוספת שום מידע ולא שולחת שום דבר לשום מקום. ההשכמות והתבניות
+        נשמרות במכשיר בלבד. החיבור היחיד לאינטרנט הוא בדיקת העדכון — בקשה אחת
+        לרשימת השחרורים הציבורית של GitHub, בלי מזהים ובלי חשבון.
+      </p>
+    </div>
+
+    <h2>קוד פתוח</h2>
+    <div class="card">
+      <p>
+        הקוד כולו זמין לבדיקה:
+        <a href="https://github.com/devfassaf/vibrating_alarm_clock">github.com/devfassaf/vibrating_alarm_clock</a>
+      </p>
+    </div>
+  </main>
+  <footer>שעון מעורר רוטט · פרויקט קוד פתוח</footer>
+</body>
+</html>

@@ -24,16 +24,20 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.faybish.vibealarm.AppGraph
 import com.faybish.vibealarm.R
+import com.faybish.vibealarm.ui.components.LabeledRow
 import com.faybish.vibealarm.ui.components.SwitchRow
+import com.faybish.vibealarm.ui.update.UpdateDialogHost
+import com.faybish.vibealarm.ui.update.UpdateViewModel
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(updateViewModel: UpdateViewModel, onBack: () -> Unit) {
     val settings = AppGraph.settings
     val scope = rememberCoroutineScope()
     val volumeKeysSnooze by settings.volumeKeysSnooze.collectAsStateWithLifecycle(initialValue = true)
     val forcePwm by settings.forcePwmFlow.collectAsStateWithLifecycle(initialValue = false)
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {
@@ -54,6 +58,17 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 16.dp),
         ) {
+            // The app also checks on every open; this is the "check right now" path,
+            // and unlike the automatic one it always reports back.
+            LabeledRow(
+                title = stringResource(R.string.setting_check_update),
+                value = updateViewModel.installedVersion
+                    ?.let { stringResource(R.string.setting_version, it) }.orEmpty(),
+                onClick = updateViewModel::checkNow,
+            )
+
+            HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
             SwitchRow(
                 title = stringResource(R.string.setting_volume_keys_snooze),
                 subtitle = stringResource(R.string.setting_volume_keys_snooze_hint),
@@ -77,6 +92,15 @@ fun SettingsScreen(onBack: () -> Unit) {
             )
 
             HorizontalDivider(Modifier.padding(vertical = 8.dp))
+
+            UpdateDialogHost(
+                state = updateState,
+                installedVersion = updateViewModel.installedVersion,
+                onDownload = updateViewModel::download,
+                onSkip = updateViewModel::skip,
+                onDismiss = updateViewModel::dismiss,
+                onOpenInstallSettings = updateViewModel::openInstallPermissionSettings,
+            )
 
             Text(
                 text = stringResource(R.string.settings_about_body),

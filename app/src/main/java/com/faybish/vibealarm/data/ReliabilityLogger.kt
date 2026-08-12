@@ -40,5 +40,7 @@ class ReliabilityLogger(
         const val EFFECT_FAILED = "EFFECT_FAILED"
         const val FALLBACK_SOUND_USED = "FALLBACK_SOUND_USED"
         const val EXACT_ALARM_BLOCKED = "EXACT_ALARM_BLOCKED"
+        const val UPDATE_CHECK = "UPDATE_CHECK"
+        const val UPDATE_INSTALL = "UPDATE_INSTALL"
     }
 }

@@ -8,13 +8,18 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
+import androidx.datastore.preferences.core.stringPreferencesKey
+import com.faybish.vibealarm.domain.update.ReleaseInfo
 import java.io.File
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.serialization.json.Json
 
 /** App-wide preferences. Lives in device-protected storage like everything else. */
 class SettingsStore(context: Context, scope: CoroutineScope) {
@@ -70,6 +75,41 @@ class SettingsStore(context: Context, scope: CoroutineScope) {
 
     suspend fun setOnboardingDone(done: Boolean) = put(KEY_ONBOARDING_DONE, done)
 
+    // --- in-app updater state (see DataStoreUpdateStore) ---
+
+    suspend fun updateSkippedVersion(): String? =
+        dataStore.data.map { it[KEY_UPDATE_SKIPPED] }.catch { emit(null) }.first()
+
+    suspend fun setUpdateSkippedVersion(version: String?) {
+        dataStore.edit {
+            if (version.isNullOrBlank()) it.remove(KEY_UPDATE_SKIPPED) else it[KEY_UPDATE_SKIPPED] = version
+        }
+    }
+
+    suspend fun updateLastCheckAt(): Long =
+        dataStore.data.map { it[KEY_UPDATE_LAST_CHECK] ?: 0L }.catch { emit(0L) }.first()
+
+    suspend fun setUpdateLastCheckAt(millis: Long) {
+        dataStore.edit { it[KEY_UPDATE_LAST_CHECK] = millis }
+    }
+
+    /** Cached so an offline open can still say what the newest known release was. */
+    suspend fun updateCachedRelease(): ReleaseInfo? {
+        val encoded = dataStore.data.map { it[KEY_UPDATE_RELEASE] }.catch { emit(null) }.first()
+        if (encoded.isNullOrBlank()) return null
+        return runCatching { json.decodeFromString<ReleaseInfo>(encoded) }.getOrNull()
+    }
+
+    suspend fun setUpdateCachedRelease(release: ReleaseInfo?) {
+        dataStore.edit {
+            if (release == null) {
+                it.remove(KEY_UPDATE_RELEASE)
+            } else {
+                it[KEY_UPDATE_RELEASE] = json.encodeToString(release)
+            }
+        }
+    }
+
     suspend fun setDefaultSnooze(minutes: Int, count: Int) {
         dataStore.edit {
             it[KEY_DEFAULT_SNOOZE_MINUTES] = minutes
@@ -88,5 +128,10 @@ class SettingsStore(context: Context, scope: CoroutineScope) {
         val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
         val KEY_DEFAULT_SNOOZE_MINUTES = intPreferencesKey("default_snooze_minutes")
         val KEY_DEFAULT_SNOOZE_COUNT = intPreferencesKey("default_snooze_count")
+        val KEY_UPDATE_SKIPPED = stringPreferencesKey("update_skipped_version")
+        val KEY_UPDATE_LAST_CHECK = longPreferencesKey("update_last_check_at")
+        val KEY_UPDATE_RELEASE = stringPreferencesKey("update_cached_release")
+
+        val json = Json { ignoreUnknownKeys = true }
     }
 }

@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Downloaded update APKs land in getExternalFilesDir(null)/updates/. Without this
+         entry FileProvider.getUriForFile throws IllegalArgumentException and the system
+         installer never opens — the single most common way this feature breaks. -->
+    <external-files-path name="app_updates" path="updates/" />
+</paths>
