@@ -2,6 +2,8 @@ package com.faybish.vibealarm.ui.format
 
 import android.content.Context
 import android.text.format.DateFormat
+import androidx.annotation.PluralsRes
+import androidx.annotation.StringRes
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
@@ -11,15 +13,15 @@ import com.faybish.vibealarm.R
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
 import com.faybish.vibealarm.domain.ScheduleSummary
+import com.faybish.vibealarm.domain.TriggerDescriptor
+import com.faybish.vibealarm.domain.TriggerWhen
 import java.time.DayOfWeek
-import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
-import java.time.format.TextStyle
 import java.time.temporal.WeekFields
 import java.util.Locale
 
@@ -46,36 +48,53 @@ private fun timeFormatter(context: Context, locale: Locale): DateTimeFormatter {
 }
 
 @Composable
-fun formatDate(date: LocalDate): String =
-    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM)
-        .withLocale(currentLocale())
-        .format(date)
+fun formatDate(date: LocalDate): String = formatDate(date, currentLocale())
+
+fun formatDate(date: LocalDate, locale: Locale): String =
+    DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale).format(date)
+
+/**
+ * Each day is named in full, from our own strings rather than from the platform's
+ * abbreviations.
+ *
+ * The platform's short Hebrew name for Sunday is "יום א׳", which cannot be shortened
+ * for a chip without turning all seven days into the same two letters — which is
+ * exactly what it did. A day picker whose labels the user has to decode is not a day
+ * picker, so every day carries its own name: ראשון ... שבת.
+ */
+@StringRes
+fun dayNameRes(day: DayOfWeek): Int = when (day) {
+    DayOfWeek.SUNDAY -> R.string.day_sunday
+    DayOfWeek.MONDAY -> R.string.day_monday
+    DayOfWeek.TUESDAY -> R.string.day_tuesday
+    DayOfWeek.WEDNESDAY -> R.string.day_wednesday
+    DayOfWeek.THURSDAY -> R.string.day_thursday
+    DayOfWeek.FRIDAY -> R.string.day_friday
+    DayOfWeek.SATURDAY -> R.string.day_saturday
+}
+
+fun dayName(context: Context, day: DayOfWeek): String = context.getString(dayNameRes(day))
 
 @Composable
-fun dayLabel(day: DayOfWeek, short: Boolean = true): String =
-    day.getDisplayName(if (short) TextStyle.SHORT else TextStyle.FULL, currentLocale())
+fun dayName(day: DayOfWeek): String = stringResource(dayNameRes(day))
 
-/** "Mon, Wed, Fri" / "Every day" / "Once" — the alarm card's schedule line. */
+/** "ראשון, שבת" / "Every day" / "Once" — the alarm card's schedule line. */
 @Composable
 fun scheduleSummaryText(schedule: Schedule): String {
+    val context = LocalContext.current
     val locale = currentLocale()
     return when (val summary = ScheduleSummarizer.summarize(schedule, weekStart())) {
         ScheduleSummary.Once -> stringResource(R.string.schedule_once)
         ScheduleSummary.EveryDay -> stringResource(R.string.schedule_every_day)
-        ScheduleSummary.Weekdays -> stringResource(R.string.schedule_weekdays)
-        ScheduleSummary.Weekend -> stringResource(R.string.schedule_weekend)
         ScheduleSummary.Never -> stringResource(R.string.schedule_no_days)
-        is ScheduleSummary.Days -> summary.days.joinToString(", ") {
-            it.getDisplayName(TextStyle.SHORT, locale)
-        }
+        is ScheduleSummary.Days -> summary.days.joinToString(", ") { dayName(context, it) }
 
         is ScheduleSummary.DateCount -> when {
             summary.count == 0 -> stringResource(R.string.schedule_no_dates)
             summary.first != null -> pluralStringResource(
                 R.plurals.schedule_dates_from,
                 summary.count,
-                DateTimeFormatter.ofLocalizedDate(FormatStyle.MEDIUM).withLocale(locale)
-                    .format(summary.first),
+                formatDate(summary.first, locale),
                 summary.count,
             )
 
@@ -86,16 +105,96 @@ fun scheduleSummaryText(schedule: Schedule): String {
 
 /** "in 7 h 20 min" — how long until the alarm rings. */
 @Composable
-fun timeUntilText(trigger: Instant): String {
-    val minutes = Duration.between(Instant.now(), trigger).toMinutes().coerceAtLeast(0)
-    val days = minutes / (24 * 60)
-    val hours = (minutes % (24 * 60)) / 60
-    val mins = minutes % 60
+fun timeUntilText(trigger: Instant): String = timeUntil(LocalContext.current, trigger)
+
+/**
+ * Built from pluralized parts rather than one format string, because Hebrew inflects the
+ * unit itself: a day is "יום", two are "יומיים", and "1 ימים" is simply wrong.
+ */
+fun timeUntil(context: Context, trigger: Instant, now: Instant = Instant.now()): String {
+    val minutes = TriggerDescriptor.remaining(trigger, now).toMinutes()
+    val days = (minutes / (24 * 60)).toInt()
+    val hours = ((minutes % (24 * 60)) / 60).toInt()
+    val mins = (minutes % 60).toInt()
     return when {
-        days > 0 -> stringResource(R.string.time_until_days, days, hours)
-        hours > 0 -> stringResource(R.string.time_until_hours, hours, mins)
-        else -> stringResource(R.string.time_until_minutes, mins)
+        days > 0 -> context.join(
+            context.part(R.plurals.duration_days_part, days),
+            context.part(R.plurals.duration_hours_part, hours),
+        )
+
+        hours > 0 -> context.join(
+            context.part(R.plurals.duration_hours_part, hours),
+            context.part(R.plurals.duration_minutes_part, mins),
+        )
+
+        mins > 0 -> context.getString(
+            R.string.time_until_one,
+            context.part(R.plurals.duration_minutes_part, mins),
+        )
+
+        // Saving an alarm for 30 seconds' time should not read "in 0 minutes".
+        else -> context.getString(R.string.time_until_now)
     }
+}
+
+private fun Context.part(@PluralsRes plurals: Int, count: Int): String =
+    resources.getQuantityString(plurals, count, count)
+
+/**
+ * Hebrew attaches the conjunction to the following word ("ושעה") but keeps a maqaf before
+ * a numeral ("ו-23 שעות"), so which joiner to use depends on the text it joins. Both
+ * variants are identical in English.
+ */
+private fun Context.join(first: String, second: String): String = getString(
+    if (second.firstOrNull()?.isDigit() == true) {
+        R.string.time_until_two_parts
+    } else {
+        R.string.time_until_two_parts_word
+    },
+    first,
+    second,
+)
+
+/**
+ * What the confirmation bubble says after a save: which day, what time, and how long
+ * from now.
+ *
+ * All three, because each one alone can be misread — "in 6 hours" hides which morning,
+ * and "Saturday 07:30" hides that the alarm is switched off. An alarm the user believes
+ * is set and is not is the one failure this app cannot afford.
+ */
+fun triggerAnnouncement(
+    context: Context,
+    locale: Locale,
+    enabled: Boolean,
+    trigger: Instant?,
+    now: Instant = Instant.now(),
+    zone: ZoneId = ZoneId.systemDefault(),
+): String {
+    if (!enabled) return context.getString(R.string.announce_disabled)
+    if (trigger == null) return context.getString(R.string.announce_no_trigger)
+
+    val time = formatTime(context, trigger.atZone(zone).toLocalTime(), locale)
+    val lead = when (val whenItRings = TriggerDescriptor.describe(trigger, now, zone)) {
+        TriggerWhen.Today -> context.getString(R.string.announce_today, time)
+        TriggerWhen.Tomorrow -> context.getString(R.string.announce_tomorrow, time)
+        is TriggerWhen.ThisWeek -> context.getString(
+            R.string.announce_this_week,
+            dayName(context, whenItRings.day),
+            time,
+        )
+
+        is TriggerWhen.Later -> context.getString(
+            R.string.announce_later,
+            formatDate(whenItRings.date, locale),
+            time,
+        )
+    }
+    return context.getString(
+        R.string.announce_with_remaining,
+        lead,
+        timeUntil(context, trigger, now),
+    )
 }
 
 @Composable

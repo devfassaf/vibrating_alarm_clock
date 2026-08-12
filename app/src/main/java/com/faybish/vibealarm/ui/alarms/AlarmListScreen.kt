@@ -1,9 +1,9 @@
 package com.faybish.vibealarm.ui.alarms
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -21,6 +21,8 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
@@ -29,22 +31,33 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.faybish.vibealarm.R
+import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.ui.format.currentLocale
+import com.faybish.vibealarm.ui.format.triggerAnnouncement
 import com.faybish.vibealarm.ui.update.UpdateDialogHost
 import com.faybish.vibealarm.ui.update.UpdateViewModel
+import java.time.Instant
 import java.time.LocalTime
+import kotlinx.coroutines.launch
 
 /**
  * The app's home screen, modelled on the alarm tab of Google's Clock: a list of
  * cards that expand in place for editing, and a "+" button that opens a time picker.
+ *
+ * Editing is deliberate here: the open card holds a draft, and every way out of it —
+ * collapsing it, opening another one, the back gesture — goes through the unsaved-changes
+ * question first. Every save answers with when the alarm will actually ring.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,9 +71,41 @@ fun AlarmListScreen(
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val patternNames by viewModel.patternNames.collectAsStateWithLifecycle()
+    val draft by viewModel.draft.collectAsStateWithLifecycle()
+    val dirty by viewModel.draftDirty.collectAsStateWithLifecycle()
 
     var expandedId by remember { mutableStateOf<Long?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
+
+    // What to do once the unsaved-changes question has been answered.
+    var pendingLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val locale = currentLocale()
+
+    fun announce(alarm: AlarmEntity, trigger: Instant?) {
+        scope.launch {
+            // Two saves in a row should read as two answers, not a queue.
+            snackbar.currentSnackbarData?.dismiss()
+            snackbar.showSnackbar(triggerAnnouncement(context, locale, alarm.enabled, trigger))
+        }
+    }
+
+    fun saveOpenCard(keepEditing: Boolean) {
+        viewModel.commitDraft(keepEditing) { saved, trigger -> announce(saved, trigger) }
+    }
+
+    /** Leaving the open card is the only moment an edit can be lost, so it asks first. */
+    fun leaveEditor(then: () -> Unit) {
+        if (dirty) {
+            pendingLeave = then
+        } else {
+            viewModel.endEdit()
+            then()
+        }
+    }
 
     // The update check runs on every open of the app. It cannot delay this screen:
     // the dialog only appears if and when GitHub answers with something newer.
@@ -69,6 +114,8 @@ fun AlarmListScreen(
 
     val appBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(appBarState)
+
+    BackHandler(enabled = dirty) { pendingLeave = { expandedId = null } }
 
     Scaffold(
         modifier = Modifier
@@ -91,10 +138,11 @@ fun AlarmListScreen(
                 scrollBehavior = scrollBehavior,
             )
         },
+        snackbarHost = { SnackbarHost(snackbar) },
         floatingActionButton = {
             // Hidden while a card is open: an expanded card is a form, and the button
-            // floats exactly over its last rows — including the preview buttons. Google
-            // Clock hides it for the same reason.
+            // floats exactly over its last rows — including save. Google Clock hides it
+            // for the same reason.
             if (expandedId == null) {
                 FloatingActionButton(onClick = { showTimePicker = true }) {
                     Icon(Icons.Filled.Add, stringResource(R.string.action_add_alarm))
@@ -118,29 +166,65 @@ fun AlarmListScreen(
                 item { EmptyState() }
             } else {
                 items(alarms, key = { it.id }) { alarm ->
+                    val cardDraft = draft?.takeIf { it.id == alarm.id && expandedId == alarm.id }
+                    val shown = cardDraft ?: alarm
                     AlarmCard(
-                        alarm = alarm,
-                        schedule = viewModel.scheduleOf(alarm),
+                        stored = alarm,
+                        draft = cardDraft,
+                        dirty = dirty && cardDraft != null,
+                        schedule = viewModel.scheduleOf(shown),
                         nextTrigger = viewModel.nextTrigger(alarm),
-                        patternName = alarm.patternId?.let { patternNames[it] },
+                        patternName = shown.patternId?.let { patternNames[it] },
                         expanded = expandedId == alarm.id,
                         onExpandToggle = {
-                            expandedId = if (expandedId == alarm.id) null else alarm.id
+                            if (expandedId == alarm.id) {
+                                leaveEditor { expandedId = null }
+                            } else {
+                                leaveEditor {
+                                    expandedId = alarm.id
+                                    viewModel.beginEdit(alarm)
+                                }
+                            }
                         },
-                        onEnabledChange = { viewModel.setEnabled(alarm.id, it) },
-                        onAlarmChange = viewModel::save,
-                        onScheduleChange = { viewModel.updateSchedule(alarm, it) },
+                        onEnabledChange = { enabled ->
+                            viewModel.setEnabled(alarm.id, enabled) { saved, trigger ->
+                                // Switching an alarm off needs no confirmation; switching
+                                // one on is a promise about the morning.
+                                if (enabled) announce(saved, trigger)
+                            }
+                        },
+                        onAlarmChange = viewModel::updateDraft,
+                        onScheduleChange = viewModel::updateDraftSchedule,
+                        onSave = { saveOpenCard(keepEditing = true) },
+                        onDiscard = viewModel::resetDraft,
                         onPickPattern = { onPickPatternFor(alarm.id) },
-                        onPreviewVibration = { viewModel.previewVibration(alarm) },
-                        onPreviewSound = { viewModel.previewSound(alarm) },
+                        onPreviewVibration = { viewModel.previewVibration(shown) },
+                        onPreviewSound = { viewModel.previewSound(shown) },
                         onDelete = {
                             expandedId = null
+                            viewModel.endEdit()
                             viewModel.delete(alarm.id)
                         },
                     )
                 }
             }
         }
+    }
+
+    pendingLeave?.let { leave ->
+        UnsavedChangesDialog(
+            onSave = {
+                pendingLeave = null
+                saveOpenCard(keepEditing = false)
+                leave()
+            },
+            onDiscard = {
+                pendingLeave = null
+                viewModel.endEdit()
+                leave()
+            },
+            onKeepEditing = { pendingLeave = null },
+        )
     }
 
     UpdateDialogHost(
@@ -160,7 +244,12 @@ fun AlarmListScreen(
             onDismiss = { showTimePicker = false },
             onConfirm = { hour, minute ->
                 showTimePicker = false
-                viewModel.addAlarm(LocalTime.of(hour, minute)) { id -> expandedId = id }
+                // A new alarm is armed at the time just picked and opens for editing, so
+                // the confirmation is about the alarm that already exists.
+                viewModel.addAlarm(LocalTime.of(hour, minute)) { saved, trigger ->
+                    expandedId = saved.id
+                    announce(saved, trigger)
+                }
             },
         )
     }
