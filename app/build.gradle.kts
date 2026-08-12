@@ -53,6 +53,11 @@ kotlin {
     jvmToolchain(17)
 }
 
+ksp {
+    // Committed Room schemas enable safe migrations in future versions.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(platform(libs.compose.bom))
     implementation(libs.androidx.core.ktx)
