@@ -24,6 +24,15 @@ object UpdateAssets {
 
     fun releasesPageUrl(): String = "https://github.com/$REPO/releases"
 
+    /**
+     * The explanation and download page, served by GitHub Pages from the repo's docs/
+     * folder. Derived from [REPO] so the two can never point at different projects.
+     */
+    fun siteUrl(): String {
+        val (owner, repo) = REPO.split('/', limit = 2).let { it[0] to it[1] }
+        return "https://$owner.github.io/$repo/"
+    }
+
     fun releasesApiUrl(perPage: Int = 30): String =
         "https://api.github.com/repos/$REPO/releases?per_page=$perPage"
 }

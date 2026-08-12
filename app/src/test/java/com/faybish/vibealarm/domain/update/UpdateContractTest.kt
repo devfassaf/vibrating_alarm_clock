@@ -117,6 +117,18 @@ class UpdateContractTest {
         assertThat(releaseScript).contains("major * 10000 + minor * 100 + patch")
     }
 
+    /** The page the share message and the Settings button both point at must exist. */
+    @Test
+    fun `the site url matches the page this repo actually publishes`() {
+        // GitHub Pages for a project repo serves at <owner>.github.io/<repo>/ from the
+        // docs/ folder — which is where the landing page lives.
+        assertThat(UpdateAssets.siteUrl()).isEqualTo(
+            "https://${UpdateAssets.REPO.substringBefore('/')}.github.io/" +
+                "${UpdateAssets.REPO.substringAfter('/')}/",
+        )
+        assertThat(File(repoRoot, "docs/index.html").isFile).isTrue()
+    }
+
     @Test
     fun `the landing page explains the Samsung background limit`() {
         // The one setting that silently cancels every scheduled alarm, and the one thing
