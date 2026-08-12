@@ -101,6 +101,8 @@
     <string name="recorder_pad_active">הוקלטו %1$d מקטעים</string>
 
     <!-- Reliability -->
+    <string name="reliability_banner_title">%1$d בעיות עלולות למנוע השכמה</string>
+    <string name="reliability_banner_hint">הקישו כדי לראות מה צריך לתקן.</string>
     <string name="check_exact_alarms">אזעקות מדויקות</string>
     <string name="check_exact_alarms_description">בלי זה ההשכמה עלולה להתעכב או לא לפעול בכלל.</string>
     <string name="check_notifications">התראות</string>

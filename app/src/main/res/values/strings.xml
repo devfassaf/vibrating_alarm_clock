@@ -101,6 +101,8 @@
     <string name="recorder_pad_active">%1$d steps recorded</string>
 
     <!-- Reliability -->
+    <string name="reliability_banner_title">%1$d issues could stop an alarm</string>
+    <string name="reliability_banner_hint">Tap to see what needs fixing.</string>
     <string name="check_exact_alarms">Exact alarms</string>
     <string name="check_exact_alarms_description">Without this the alarm may be delayed or skipped entirely.</string>
     <string name="check_notifications">Notifications</string>
