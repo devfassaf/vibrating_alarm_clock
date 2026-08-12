@@ -120,7 +120,7 @@ class AlarmNotifications(private val context: Context) {
             .build()
 
     fun postFiring(alarm: AlarmEntity, instanceId: Long) {
-        manager.notify(FIRING_NOTIFICATION_ID, buildFiring(alarm, instanceId))
+        manager.notify(firingId(alarm.id), buildFiring(alarm, instanceId))
     }
 
     fun showSnoozed(alarm: AlarmEntity, instanceId: Long, until: Instant, remaining: Int?) {
@@ -160,8 +160,9 @@ class AlarmNotifications(private val context: Context) {
         manager.notify(missedId(alarm.id), notification)
     }
 
+    /** Cancels only this alarm's notifications; another alarm may be ringing. */
     fun cancelForAlarm(alarmId: Long) {
-        manager.cancel(FIRING_NOTIFICATION_ID)
+        manager.cancel(firingId(alarmId))
         manager.cancel(snoozedId(alarmId))
     }
 
@@ -179,9 +180,12 @@ class AlarmNotifications(private val context: Context) {
         const val CHANNEL_SILENT = "alarm_silent"
         const val CHANNEL_STATUS = "alarm_status"
 
-        const val FIRING_NOTIFICATION_ID = 1001
+        private const val FIRING_ID_BASE = 100_000
         private const val SNOOZED_ID_BASE = 200_000
         private const val MISSED_ID_BASE = 300_000
+
+        /** Per-alarm id: the foreground notification must not be a shared slot. */
+        fun firingId(alarmId: Long) = FIRING_ID_BASE + alarmId.toInt()
 
         private val timeFormatter: DateTimeFormatter =
             DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)

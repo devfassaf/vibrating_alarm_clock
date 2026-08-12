@@ -67,6 +67,7 @@
     <string name="ring_mode_sound">צליל</string>
     <string name="snooze_repeats_none">בלי</string>
     <string name="snooze_repeats_until_dismissed">עד כיבוי</string>
+    <string name="snooze_until_dismissed_warning">כשהמסך כבוי, שום דבר לא יעצור את ההשכמה בלי לגעת בטלפון — היא תמשיך לרטוט. להשכמה ללא מגע בחרו מספר חזרות.</string>
     <string name="minutes_short">%1$d דק׳</string>
     <string name="pattern_default">ברירת מחדל</string>
 

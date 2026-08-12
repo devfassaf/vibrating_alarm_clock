@@ -16,6 +16,8 @@ import com.faybish.vibealarm.domain.SessionPhase
 import com.faybish.vibealarm.domain.SessionState
 import java.time.Duration
 import java.time.Instant
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * Where the pure [AlarmSessionReducer] meets Android: loads persisted state,
@@ -33,22 +35,32 @@ class SessionRuntime(
     private val logger: ReliabilityLogger,
 ) {
 
-    /** Sink for the two effects that need a live vibrator/player. */
+    /**
+     * Serializes every transition. Effects are ordered on purpose — the instance row
+     * is written before AlarmManager is touched — and the row is read-modify-written
+     * whole, so two transitions running at once would clobber each other and could
+     * demote a live ring back to snoozed.
+     */
+    private val mutex = Mutex()
+
+    /** Sink for the effects that need a live vibrator/player. */
     interface OutputSink {
         fun startOutputs(alarm: AlarmEntity, instanceId: Long)
-        fun stopOutputs()
+
+        /** @param alarmId whose outputs to stop — never silence a different alarm. */
+        fun stopOutputs(alarmId: Long)
 
         /** Promote the firing notification (the service's own foreground notification). */
         fun showFiring(alarm: AlarmEntity, instanceId: Long)
     }
 
-    /** Used by receivers: control the service instead of the engines. */
+    /** Used by receivers and activities: control the service instead of the engines. */
     inner class ServiceControlSink : OutputSink {
         override fun startOutputs(alarm: AlarmEntity, instanceId: Long) {
             AlarmServiceStarter.start(context, alarm, instanceId, logger, notifications)
         }
 
-        override fun stopOutputs() = AlarmServiceStarter.stop(context)
+        override fun stopOutputs(alarmId: Long) = AlarmServiceStarter.stop(context, alarmId)
 
         override fun showFiring(alarm: AlarmEntity, instanceId: Long) {
             // The service posts its own foreground notification when it starts.
@@ -67,6 +79,15 @@ class SessionRuntime(
         event: SessionEvent,
         sink: OutputSink,
         instanceIdHint: Long = 0,
+    ): SessionState? = mutex.withLock {
+        handleLocked(alarmId, event, sink, instanceIdHint)
+    }
+
+    private suspend fun handleLocked(
+        alarmId: Long,
+        event: SessionEvent,
+        sink: OutputSink,
+        instanceIdHint: Long,
     ): SessionState? {
         val alarm = repository.getAlarm(alarmId) ?: run {
             logger.log(ReliabilityLogger.MISSED, "alarm=$alarmId no longer exists")
@@ -82,52 +103,74 @@ class SessionRuntime(
         if (effects.isEmpty()) return next
 
         for (effect in effects) {
-            when (effect) {
-                is SessionEffect.Persist -> {
-                    entity = entity.applying(effect.state)
-                    val id = repository.saveInstance(entity)
-                    entity = entity.copy(id = id)
-                }
-
-                SessionEffect.StartOutputs -> sink.startOutputs(alarm, entity.id)
-
-                SessionEffect.StopOutputs -> sink.stopOutputs()
-
-                is SessionEffect.ArmExact -> scheduler.arm(alarm.id, entity.id, effect.at)
-
-                SessionEffect.ShowFiringNotification -> {
-                    logger.log(
-                        ReliabilityLogger.FIRED,
-                        "alarm=${alarm.id} instance=${entity.id} snoozesUsed=${next.snoozesUsed}",
-                    )
-                    sink.showFiring(alarm, entity.id)
-                }
-
-                is SessionEffect.ShowSnoozedNotification -> {
-                    logger.log(
-                        ReliabilityLogger.SNOOZED,
-                        "alarm=${alarm.id} until=${effect.until} remaining=${effect.remainingSnoozes}",
-                    )
-                    notifications.showSnoozed(alarm, entity.id, effect.until, effect.remainingSnoozes)
-                }
-
-                SessionEffect.CancelNotifications -> {
-                    next.endedReason?.let {
-                        logger.log(it.logEvent(), "alarm=${alarm.id} instance=${entity.id}")
-                    }
-                    notifications.cancelForAlarm(alarm.id)
-                }
-
-                SessionEffect.ScheduleNextOccurrence ->
-                    scheduler.scheduleNextOccurrence(alarm, afterFiring = true)
-
-                is SessionEffect.ReportMissed -> {
-                    logger.log(ReliabilityLogger.MISSED, "alarm=${alarm.id} at=${effect.occurrence}")
-                    notifications.showMissed(alarm, effect.occurrence)
-                }
+            // One failing effect must not abandon the rest — losing ArmExact would
+            // end the chain silently, which is the one outcome this app cannot have.
+            try {
+                entity = apply(effect, alarm, entity, next, sink)
+            } catch (e: Exception) {
+                logger.log(
+                    ReliabilityLogger.EFFECT_FAILED,
+                    "alarm=$alarmId effect=${effect.javaClass.simpleName} " +
+                        "${e.javaClass.simpleName}: ${e.message}",
+                )
             }
         }
         return next
+    }
+
+    /** @return the instance row, updated if this effect persisted it. */
+    private suspend fun apply(
+        effect: SessionEffect,
+        alarm: AlarmEntity,
+        entity: AlarmInstanceEntity,
+        next: SessionState,
+        sink: OutputSink,
+    ): AlarmInstanceEntity {
+        when (effect) {
+            is SessionEffect.Persist -> {
+                val updated = entity.applying(effect.state)
+                val id = repository.saveInstance(updated)
+                return updated.copy(id = id)
+            }
+
+            SessionEffect.StartOutputs -> sink.startOutputs(alarm, entity.id)
+
+            SessionEffect.StopOutputs -> sink.stopOutputs(alarm.id)
+
+            is SessionEffect.ArmExact -> scheduler.arm(alarm.id, entity.id, effect.at)
+
+            SessionEffect.ShowFiringNotification -> {
+                logger.log(
+                    ReliabilityLogger.FIRED,
+                    "alarm=${alarm.id} instance=${entity.id} snoozesUsed=${next.snoozesUsed}",
+                )
+                sink.showFiring(alarm, entity.id)
+            }
+
+            is SessionEffect.ShowSnoozedNotification -> {
+                logger.log(
+                    ReliabilityLogger.SNOOZED,
+                    "alarm=${alarm.id} until=${effect.until} remaining=${effect.remainingSnoozes}",
+                )
+                notifications.showSnoozed(alarm, entity.id, effect.until, effect.remainingSnoozes)
+            }
+
+            SessionEffect.CancelNotifications -> {
+                next.endedReason?.let {
+                    logger.log(it.logEvent(), "alarm=${alarm.id} instance=${entity.id}")
+                }
+                notifications.cancelForAlarm(alarm.id)
+            }
+
+            SessionEffect.ScheduleNextOccurrence ->
+                scheduler.scheduleNextOccurrence(alarm, afterFiring = true)
+
+            is SessionEffect.ReportMissed -> {
+                logger.log(ReliabilityLogger.MISSED, "alarm=${alarm.id} at=${effect.occurrence}")
+                notifications.showMissed(alarm, effect.occurrence)
+            }
+        }
+        return entity
     }
 
     /**

@@ -26,6 +26,10 @@ import kotlinx.coroutines.launch
  * hands control back to [SessionRuntime], which decides whether to auto-snooze
  * or finish the chain. The service does not stay alive across a snooze — the
  * chain lives in the database and in AlarmManager, not in this process.
+ *
+ * This service is the only place that performs the `Fire` transition, because it
+ * is the only place that owns the vibrator: the receiver hands the trigger over
+ * without touching the state machine.
  */
 class AlarmRingingService : Service() {
 
@@ -36,6 +40,7 @@ class AlarmRingingService : Service() {
 
     /** Waits out the alerting window; cleared before it dispatches completion. */
     private var timerJob: Job? = null
+    private var currentStartId: Int = 0
 
     private val runtime: SessionRuntime get() = AppGraph.sessionRuntime
     private val notifications: AlarmNotifications get() = AppGraph.notifications
@@ -46,7 +51,11 @@ class AlarmRingingService : Service() {
         override fun startOutputs(alarm: AlarmEntity, instanceId: Long) =
             startPlayback(alarm, instanceId)
 
-        override fun stopOutputs() = stopPlayback()
+        override fun stopOutputs(alarmId: Long) {
+            // Only stop if this really is the alarm we are playing: a transition for
+            // some other alarm must never silence a live one.
+            if (alarmId == playingAlarmId) stopOutputsOnly()
+        }
 
         override fun showFiring(alarm: AlarmEntity, instanceId: Long) =
             notifications.postFiring(alarm, instanceId)
@@ -61,35 +70,68 @@ class AlarmRingingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val alarmId = intent?.getLongExtra(AlarmIntents.EXTRA_ALARM_ID, 0) ?: 0
 
-        if (intent == null || intent.action == AlarmIntents.ACTION_STOP_RINGING || alarmId == 0L) {
-            stopPlayback()
-            stopSelf()
+        if (intent == null || alarmId == 0L) {
+            stopEverything()
+            stopSelf(startId)
             return START_NOT_STICKY
         }
 
+        if (intent.action == AlarmIntents.ACTION_STOP_RINGING) {
+            if (alarmId == playingAlarmId) {
+                stopEverything()
+                stopSelf(startId)
+            }
+            return START_NOT_STICKY
+        }
+
+        // A different alarm arriving replaces this one: there is a single vibrator.
+        if (playingAlarmId != null && playingAlarmId != alarmId) stopOutputsOnly()
+
         // The platform allows only a few seconds between startForegroundService and
         // startForeground, so post before touching the database.
-        startForegroundCompat(intent.getBooleanExtra(EXTRA_TURN_SCREEN_ON, true))
+        val turnScreenOn = intent.getBooleanExtra(EXTRA_TURN_SCREEN_ON, true)
+        if (!startForegroundCompat(alarmId, turnScreenOn)) return START_NOT_STICKY
+
+        playingAlarmId = alarmId
+        currentStartId = startId
         acquireWakeLock(PROVISIONAL_WAKE_LOCK_MS)
 
         val instanceId = intent.getLongExtra(AlarmIntents.EXTRA_INSTANCE_ID, 0)
         scope.launch {
-            runtime.preemptOthers(exceptAlarmId = alarmId, sink = sink)
+            runtime.preemptOthers(exceptAlarmId = alarmId, sink = runtime.ServiceControlSink())
             runtime.handle(alarmId, SessionEvent.Fire(Instant.now()), sink, instanceId)
         }
         return START_NOT_STICKY
     }
 
-    private fun startForegroundCompat(turnScreenOn: Boolean) {
+    /**
+     * @return false when the platform refused the foreground start. The alerting
+     *   notification is posted directly in that case, so the alarm still surfaces —
+     *   a refusal must never turn into a silent morning.
+     */
+    private fun startForegroundCompat(alarmId: Long, turnScreenOn: Boolean): Boolean {
         val notification = notifications.buildStarting(turnScreenOn)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(
-                AlarmNotifications.FIRING_NOTIFICATION_ID,
-                notification,
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED,
+        return try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    AlarmNotifications.firingId(alarmId),
+                    notification,
+                    ServiceInfo.FOREGROUND_SERVICE_TYPE_SYSTEM_EXEMPTED,
+                )
+            } else {
+                startForeground(AlarmNotifications.firingId(alarmId), notification)
+            }
+            true
+        } catch (e: Exception) {
+            logger.log(
+                ReliabilityLogger.FGS_DENIED,
+                "alarm=$alarmId startForeground ${e.javaClass.simpleName}: ${e.message}",
             )
-        } else {
-            startForeground(AlarmNotifications.FIRING_NOTIFICATION_ID, notification)
+            scope.launch {
+                AppGraph.repository.getAlarm(alarmId)?.let { notifications.postFiring(it, 0) }
+            }
+            stopSelf()
+            false
         }
     }
 
@@ -135,18 +177,28 @@ class AlarmRingingService : Service() {
             // which must not cancel the coroutine that is applying the effects.
             timerJob = null
             scope.launch {
+                // Deliberately keeps the wake lock past stopping the outputs: the
+                // transition still has to write the instance and arm the next snooze,
+                // and with the screen off this is the only thing keeping the CPU up.
+                acquireWakeLock(TRANSITION_WAKE_LOCK_MS)
                 runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, instanceId)
-                stopSelf()
+                stopSelf(currentStartId)
             }
         }
     }
 
-    private fun stopPlayback() {
+    /** Silences output without giving up the wake lock. */
+    private fun stopOutputsOnly() {
         timerJob?.cancel()
         timerJob = null
         vibration.stop()
         sound.stop()
+    }
+
+    private fun stopEverything() {
+        stopOutputsOnly()
         releaseWakeLock()
+        playingAlarmId = null
     }
 
     private fun acquireWakeLock(durationMs: Long) {
@@ -162,7 +214,7 @@ class AlarmRingingService : Service() {
     }
 
     override fun onDestroy() {
-        stopPlayback()
+        stopEverything()
         scope.cancel()
         super.onDestroy()
     }
@@ -171,9 +223,21 @@ class AlarmRingingService : Service() {
 
     companion object {
         const val EXTRA_TURN_SCREEN_ON = "turnScreenOn"
+
+        /**
+         * The alarm currently alerting, or null. Read by [AlarmServiceStarter] so a
+         * transition belonging to one alarm cannot stop another's ringing service.
+         * Service and receivers always share a process, so a static is the honest
+         * representation of "what this process is currently playing".
+         */
+        @Volatile
+        var playingAlarmId: Long? = null
+            private set
+
         private const val WAKE_LOCK_TAG = "VibeAlarm:ringing"
         private const val PROVISIONAL_WAKE_LOCK_MS = 3 * 60 * 1000L
         private const val WAKE_LOCK_MARGIN_MS = 10_000L
+        private const val TRANSITION_WAKE_LOCK_MS = 30_000L
         private const val PLAYBACK_TAIL_MS = 250L
         private const val MIN_WINDOW_MS = 1_000L
     }
@@ -210,9 +274,10 @@ object AlarmServiceStarter {
         }
     }
 
-    fun stop(context: Context) {
+    /** Stops the ringing service only if it is this alarm that is playing. */
+    fun stop(context: Context, alarmId: Long) {
+        if (AlarmRingingService.playingAlarmId != alarmId) return
         val intent = Intent(context, AlarmRingingService::class.java)
-            .setAction(AlarmIntents.ACTION_STOP_RINGING)
         runCatching { context.stopService(intent) }
     }
 }

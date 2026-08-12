@@ -332,6 +332,15 @@ private fun SnoozeSettings(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) 
             selected = alarm.snoozeRepeatCount,
             onSelected = { onChange(alarm.copy(snoozeRepeatCount = it)) },
         )
+        // "Until dismissed" plus a dark screen means nothing will ever stop it on its
+        // own — the opposite of what a hands-free alarm is for. Say so plainly.
+        if (alarm.snoozeRepeatCount == -1 && !alarm.turnScreenOn) {
+            Text(
+                text = stringResource(R.string.snooze_until_dismissed_warning),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
     }
 }
 

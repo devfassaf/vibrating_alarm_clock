@@ -3,6 +3,9 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Per-alarm volume: MediaPlayer volume is relative to the alarm stream, so the
+         stream level is set for the duration of the alarm and restored afterwards. -->
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <!-- Exact alarms: SCHEDULE_EXACT_ALARM is default-granted on 12/12L but denied for
          new installs on 14+; USE_EXACT_ALARM (13+) is install-time and irrevocable,

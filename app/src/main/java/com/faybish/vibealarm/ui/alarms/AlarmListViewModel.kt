@@ -64,9 +64,12 @@ class AlarmListViewModel : ViewModel() {
             val previous = repository.getAlarm(alarm.id)
             val id = repository.saveAlarm(alarm)
             val saved = repository.getAlarm(id) ?: return@launch
-            if (previous == null || previous.affectsTiming() != saved.affectsTiming()) {
-                scheduler.onAlarmSaved(saved)
-            }
+            val timingChanged = previous == null ||
+                previous.affectsTiming() != saved.affectsTiming()
+            // An enabled alarm with no live chain is unarmed — e.g. it was saved while
+            // the exact-alarm permission was still missing. Fix that on any edit.
+            val unarmed = saved.enabled && repository.activeInstance(saved.id) == null
+            if (timingChanged || unarmed) scheduler.onAlarmSaved(saved)
         }
     }
 

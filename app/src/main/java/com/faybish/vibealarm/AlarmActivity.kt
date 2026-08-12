@@ -1,5 +1,6 @@
 package com.faybish.vibealarm
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
@@ -17,6 +18,7 @@ import com.faybish.vibealarm.domain.SessionEvent
 import com.faybish.vibealarm.ui.ringing.RingingScreen
 import com.faybish.vibealarm.ui.theme.VibeAlarmTheme
 import java.time.Instant
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -33,13 +35,13 @@ class AlarmActivity : ComponentActivity() {
     private var instanceId: Long = 0
     private var alarm by mutableStateOf<AlarmEntity?>(null)
     private var volumeKeysSnooze = true
+    private var watchJob: Job? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         showOverLockScreen()
 
-        alarmId = intent.getLongExtra(AlarmIntents.EXTRA_ALARM_ID, 0)
-        instanceId = intent.getLongExtra(AlarmIntents.EXTRA_INSTANCE_ID, 0)
+        bind(intent)
 
         setContent {
             VibeAlarmTheme {
@@ -51,18 +53,34 @@ class AlarmActivity : ComponentActivity() {
             }
         }
 
-        lifecycleScope.launch {
+    }
+
+    /**
+     * This activity is singleInstance, so a second alarm's full-screen intent can be
+     * delivered here instead of creating a new instance. Without rebinding, the screen
+     * would keep showing the previous alarm while its buttons acted on stale ids.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        bind(intent)
+    }
+
+    private fun bind(intent: Intent) {
+        alarmId = intent.getLongExtra(AlarmIntents.EXTRA_ALARM_ID, 0)
+        instanceId = intent.getLongExtra(AlarmIntents.EXTRA_INSTANCE_ID, 0)
+
+        watchJob?.cancel()
+        watchJob = lifecycleScope.launch {
             val loaded = AppGraph.repository.getAlarm(alarmId)
             alarm = loaded
             // The alarm may defer the volume-key behavior to the global setting.
             volumeKeysSnooze = loaded?.volumeKeysSnooze
                 ?: AppGraph.settings.volumeKeysSnooze.first()
-        }
 
-        // A vibration-only pattern ends on its own and the session auto-snoozes with
-        // nobody touching the phone. When that happens this screen has to go away too,
-        // otherwise it sits there showing a ringing alarm that already stopped.
-        lifecycleScope.launch {
+            // A vibration-only pattern ends on its own and the session auto-snoozes with
+            // nobody touching the phone. When that happens this screen has to go away
+            // too, otherwise it sits there showing an alarm that already stopped.
             AppGraph.repository.observeActiveInstance(alarmId).collect { instance ->
                 if (instance == null || instance.state != InstanceState.FIRING) finish()
             }

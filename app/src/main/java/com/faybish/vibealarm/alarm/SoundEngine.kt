@@ -113,11 +113,11 @@ class SoundEngine(
     }
 
     private fun releasePlayer() {
-        player?.runCatching {
-            if (isPlaying) stop()
-            release()
-        }
+        val current = player ?: return
         player = null
+        // release() must happen even if the stop() path throws, or the player leaks.
+        runCatching { if (current.isPlaying) current.stop() }
+        runCatching { current.release() }
     }
 
     private companion object {

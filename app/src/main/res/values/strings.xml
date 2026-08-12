@@ -67,6 +67,7 @@
     <string name="ring_mode_sound">Sound</string>
     <string name="snooze_repeats_none">None</string>
     <string name="snooze_repeats_until_dismissed">Until dismissed</string>
+    <string name="snooze_until_dismissed_warning">With the screen off, nothing can stop this alarm without touching the phone — it will keep vibrating. Pick a number of repeats for a hands-free alarm.</string>
     <string name="minutes_short">%1$d min</string>
     <string name="pattern_default">Default</string>
 

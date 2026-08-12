@@ -37,6 +37,7 @@ class ReliabilityLogger(
         const val TIME_CHANGED = "TIME_CHANGED"
         const val PACKAGE_REPLACED = "PACKAGE_REPLACED"
         const val FGS_DENIED = "FGS_DENIED"
+        const val EFFECT_FAILED = "EFFECT_FAILED"
         const val FALLBACK_SOUND_USED = "FALLBACK_SOUND_USED"
         const val EXACT_ALARM_BLOCKED = "EXACT_ALARM_BLOCKED"
     }

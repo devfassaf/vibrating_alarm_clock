@@ -62,15 +62,15 @@ class AlarmPipelineTest {
     /** Records the effects that would otherwise reach the vibrator. */
     private class RecordingSink : SessionRuntime.OutputSink {
         val started = mutableListOf<Long>()
-        var stopCount = 0
+        val stopped = mutableListOf<Long>()
         val firingShown = mutableListOf<Long>()
 
         override fun startOutputs(alarm: AlarmEntity, instanceId: Long) {
             started += alarm.id
         }
 
-        override fun stopOutputs() {
-            stopCount++
+        override fun stopOutputs(alarmId: Long) {
+            stopped += alarmId
         }
 
         override fun showFiring(alarm: AlarmEntity, instanceId: Long) {
@@ -235,7 +235,7 @@ class AlarmPipelineTest {
         assertThat(scheduledAlarms()).hasSize(1)
         assertThat(scheduledAlarms().single().triggerAtTime).isEqualTo(next.nextActionEpochMillis)
         // Every ring stopped its own output.
-        assertThat(sink.stopCount).isAtLeast(3)
+        assertThat(sink.stopped).hasSize(3)
     }
 
     @Test

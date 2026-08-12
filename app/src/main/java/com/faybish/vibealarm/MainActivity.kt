@@ -14,6 +14,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Opening the app is a safe moment to reconcile the schedule with what is
+        // actually armed — unlike process start, which can race an incoming trigger.
+        AppGraph.syncSchedule()
         enableEdgeToEdge()
         setContent {
             VibeAlarmTheme {
