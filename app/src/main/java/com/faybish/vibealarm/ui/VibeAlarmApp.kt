@@ -19,6 +19,7 @@ import com.faybish.vibealarm.ui.patterns.RecorderPadScreen
 import com.faybish.vibealarm.ui.reliability.ReliabilityScreen
 import com.faybish.vibealarm.ui.reliability.ReliabilityViewModel
 import com.faybish.vibealarm.ui.settings.SettingsScreen
+import com.faybish.vibealarm.ui.update.UpdateViewModel
 
 private object Routes {
     const val ALARMS = "alarms"
@@ -43,10 +44,17 @@ fun VibeAlarmApp() {
         factory = viewModelFactory { PatternViewModel(VibrationEngine(context)) },
     )
 
+    // One instance for the whole app: the automatic check and the Settings button
+    // share the same state, so the two can never disagree about what is available.
+    val updateViewModel: UpdateViewModel = viewModel(
+        factory = viewModelFactory { UpdateViewModel(context) },
+    )
+
     NavHost(navController = navController, startDestination = Routes.ALARMS) {
         composable(Routes.ALARMS) {
             AlarmListScreen(
                 viewModel = viewModel(),
+                updateViewModel = updateViewModel,
                 onOpenPatterns = { navController.navigate(Routes.patterns(null)) },
                 onOpenReliability = { navController.navigate(Routes.RELIABILITY) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
@@ -110,7 +118,10 @@ fun VibeAlarmApp() {
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                updateViewModel = updateViewModel,
+                onBack = { navController.popBackStack() },
+            )
         }
     }
 }

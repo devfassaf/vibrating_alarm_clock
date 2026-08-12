@@ -176,4 +176,28 @@
         <item quantity="two">נודניק עד %1$s · נשארו שניים</item>
         <item quantity="other">נודניק עד %1$s · נשארו %2$d</item>
     </plurals>
+
+    <!-- In-app updater -->
+    <string name="update_checking">בודק אם יש עדכון…</string>
+    <string name="update_up_to_date">האפליקציה מעודכנת</string>
+    <string name="update_installed_version">הגרסה המותקנת: %1$s</string>
+    <string name="update_available_title">גרסה %1$s זמינה</string>
+    <string name="update_whats_new">מה חדש</string>
+    <string name="update_no_notes">לא פורסמו פרטים לגרסה הזו.</string>
+    <string name="update_size_mb">גודל ההורדה: %1$.1f MB</string>
+    <string name="update_action_install">עדכן</string>
+    <string name="update_action_later">לא עכשיו</string>
+    <string name="update_action_skip">דלג על הגרסה הזו</string>
+    <string name="update_downloading">מוריד גרסה %1$s…</string>
+    <string name="update_downloaded_of">%1$.1f מתוך %2$.1f MB</string>
+    <string name="update_postponed_title">גרסה %1$s זמינה</string>
+    <string name="update_postponed_body">יש השכמה בחצי השעה הקרובה, ולכן העדכון לא מוצע עכשיו — התקנה מחליפה את האפליקציה. הוא יוצע בפתיחה הבאה.</string>
+    <string name="update_problem_title">העדכון לא הושלם</string>
+    <string name="update_problem_network">לא הצלחתי להגיע לגיטהאב. בדקו את החיבור ונסו שוב.</string>
+    <string name="update_problem_download">ההורדה נכשלה. נסו שוב מאוחר יותר.</string>
+    <string name="update_problem_truncated">הקובץ שהורד היה חלקי, ולכן נמחק במקום להותקן. נסו שוב.</string>
+    <string name="update_problem_permission">אנדרואיד צריכה הרשאה להתקין אפליקציות מהאפליקציה הזו. אשרו "התקנת אפליקציות לא מוכרות" ונסו שוב.</string>
+    <string name="update_problem_install">לא הצלחתי להפעיל את מתקין החבילות.</string>
+    <string name="setting_check_update">בדיקת עדכון</string>
+    <string name="setting_version">גרסה %1$s</string>
 </resources>

@@ -25,6 +25,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberTopAppBarState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -37,6 +38,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.faybish.vibealarm.R
+import com.faybish.vibealarm.ui.update.UpdateDialogHost
+import com.faybish.vibealarm.ui.update.UpdateViewModel
 import java.time.LocalTime
 
 /**
@@ -47,6 +50,7 @@ import java.time.LocalTime
 @Composable
 fun AlarmListScreen(
     viewModel: AlarmListViewModel,
+    updateViewModel: UpdateViewModel,
     onOpenPatterns: () -> Unit,
     onOpenReliability: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -57,6 +61,11 @@ fun AlarmListScreen(
 
     var expandedId by remember { mutableStateOf<Long?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
+
+    // The update check runs on every open of the app. It cannot delay this screen:
+    // the dialog only appears if and when GitHub answers with something newer.
+    val updateState by updateViewModel.state.collectAsStateWithLifecycle()
+    LaunchedEffect(Unit) { updateViewModel.checkOnOpen() }
 
     val appBarState = rememberTopAppBarState()
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior(appBarState)
@@ -126,6 +135,15 @@ fun AlarmListScreen(
             }
         }
     }
+
+    UpdateDialogHost(
+        state = updateState,
+        installedVersion = updateViewModel.installedVersion,
+        onDownload = updateViewModel::download,
+        onSkip = updateViewModel::skip,
+        onDismiss = updateViewModel::dismiss,
+        onOpenInstallSettings = updateViewModel::openInstallPermissionSettings,
+    )
 
     if (showTimePicker) {
         val now = LocalTime.now()
