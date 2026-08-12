@@ -12,6 +12,7 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.faybish.vibealarm.alarm.AlarmIntents
 import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.data.InstanceState
 import com.faybish.vibealarm.domain.SessionEvent
 import com.faybish.vibealarm.ui.ringing.RingingScreen
 import com.faybish.vibealarm.ui.theme.VibeAlarmTheme
@@ -56,6 +57,15 @@ class AlarmActivity : ComponentActivity() {
             // The alarm may defer the volume-key behavior to the global setting.
             volumeKeysSnooze = loaded?.volumeKeysSnooze
                 ?: AppGraph.settings.volumeKeysSnooze.first()
+        }
+
+        // A vibration-only pattern ends on its own and the session auto-snoozes with
+        // nobody touching the phone. When that happens this screen has to go away too,
+        // otherwise it sits there showing a ringing alarm that already stopped.
+        lifecycleScope.launch {
+            AppGraph.repository.observeActiveInstance(alarmId).collect { instance ->
+                if (instance == null || instance.state != InstanceState.FIRING) finish()
+            }
         }
     }
 

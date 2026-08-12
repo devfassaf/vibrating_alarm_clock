@@ -26,7 +26,9 @@ import kotlinx.coroutines.launch
 
 class ReliabilityViewModel(context: Context) : ViewModel() {
 
-    private val checks = ReliabilityChecks(context, AppGraph.scheduler)
+    // Application context: a ViewModel outlives the activity it was created from.
+    private val appContext = context.applicationContext
+    private val checks = ReliabilityChecks(appContext, AppGraph.scheduler)
     private val repository = AppGraph.repository
 
     private val _results = MutableStateFlow(checks.runAll())

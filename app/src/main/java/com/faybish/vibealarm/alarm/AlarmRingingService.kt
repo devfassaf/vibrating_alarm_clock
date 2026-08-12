@@ -120,8 +120,10 @@ class AlarmRingingService : Service() {
 
             // A vibration-only alarm lasts exactly one pass of the pattern. That is
             // the entire point: it stops by itself without anyone touching the phone.
+            // The floor guards against a device with no vibrator reporting 0 and
+            // turning the chain into an instant snooze loop.
             val windowMs = if (vibrateOnly) {
-                patternMs
+                patternMs.coerceAtLeast(MIN_WINDOW_MS)
             } else {
                 alarm.autoSilenceSeconds.coerceAtLeast(1) * 1000L
             }
@@ -173,6 +175,7 @@ class AlarmRingingService : Service() {
         private const val PROVISIONAL_WAKE_LOCK_MS = 3 * 60 * 1000L
         private const val WAKE_LOCK_MARGIN_MS = 10_000L
         private const val PLAYBACK_TAIL_MS = 250L
+        private const val MIN_WINDOW_MS = 1_000L
     }
 }
 

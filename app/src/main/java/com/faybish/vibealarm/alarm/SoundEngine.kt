@@ -51,11 +51,12 @@ class SoundEngine(
     }
 
     private fun start(uri: Uri, volume: Float): Boolean = try {
-        applyStreamVolume(volume)
+        val playerVolume = applyStreamVolume(volume)
         player = MediaPlayer().apply {
             setAudioAttributes(ALARM_ATTRIBUTES)
             setDataSource(context, uri)
             isLooping = true
+            setVolume(playerVolume, playerVolume)
             prepare()
             start()
         }
@@ -66,10 +67,11 @@ class SoundEngine(
     }
 
     private fun startBundledFallback(volume: Float): Boolean = try {
-        applyStreamVolume(volume)
+        val playerVolume = applyStreamVolume(volume)
         player = MediaPlayer.create(context, R.raw.fallback_alarm)?.apply {
             setAudioAttributes(ALARM_ATTRIBUTES)
             isLooping = true
+            setVolume(playerVolume, playerVolume)
             start()
         }
         player != null
@@ -79,20 +81,26 @@ class SoundEngine(
     }
 
     /**
-     * Sets the alarm stream to the per-alarm level, remembering the previous one.
-     * Total-silence DND can make this throw on some builds; then we fall back to
-     * scaling within whatever the stream is already at.
+     * Moves the alarm stream to the per-alarm level, remembering the previous one so
+     * [stop] can put it back.
+     *
+     * @return the volume the player itself should use: 1.0 when the stream was set
+     *   for us, or the requested fraction when it could not be (total-silence DND
+     *   makes this throw on some builds), since player volume is relative to the
+     *   stream and is the only lever left in that case.
      */
-    private fun applyStreamVolume(volume: Float) {
-        if (savedStreamVolume != null) return
+    private fun applyStreamVolume(volume: Float): Float {
+        val requested = volume.coerceIn(0f, 1f)
+        if (savedStreamVolume != null) return 1f
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        val target = (volume.coerceIn(0f, 1f) * max).toInt().coerceIn(1, max)
-        try {
+        val target = (requested * max).toInt().coerceIn(1, max)
+        return try {
             savedStreamVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
             audioManager.setStreamVolume(AudioManager.STREAM_ALARM, target, 0)
+            1f
         } catch (e: SecurityException) {
             savedStreamVolume = null
-            player?.setVolume(volume, volume)
+            requested
         }
     }
 

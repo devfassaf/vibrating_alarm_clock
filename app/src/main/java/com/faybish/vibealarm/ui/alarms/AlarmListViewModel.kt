@@ -54,13 +54,31 @@ class AlarmListViewModel : ViewModel() {
         }
     }
 
+    /**
+     * Rescheduling tears down the alarm's live snooze chain, so it only happens when
+     * an edit actually changes when the alarm should ring. Typing a label while the
+     * alarm is snoozed must not cancel the snooze.
+     */
     fun save(alarm: AlarmEntity) {
         viewModelScope.launch {
+            val previous = repository.getAlarm(alarm.id)
             val id = repository.saveAlarm(alarm)
             val saved = repository.getAlarm(id) ?: return@launch
-            scheduler.onAlarmSaved(saved)
+            if (previous == null || previous.affectsTiming() != saved.affectsTiming()) {
+                scheduler.onAlarmSaved(saved)
+            }
         }
     }
+
+    /** The fields that determine when the alarm fires next. */
+    private fun AlarmEntity.affectsTiming() = listOf(
+        enabled,
+        scheduleType,
+        timeMinutesOfDay,
+        daysBitmask,
+        perDayOverridesJson,
+        datesJson,
+    )
 
     fun updateSchedule(alarm: AlarmEntity, schedule: Schedule) {
         save(ScheduleCodec.encode(schedule, alarm))

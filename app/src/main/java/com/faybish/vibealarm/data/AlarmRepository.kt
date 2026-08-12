@@ -69,6 +69,9 @@ class AlarmRepository(private val db: AppDb) {
     suspend fun activeInstance(alarmId: Long): AlarmInstanceEntity? =
         instanceDao.getActiveForAlarm(alarmId)
 
+    fun observeActiveInstance(alarmId: Long): Flow<AlarmInstanceEntity?> =
+        instanceDao.observeActiveForAlarm(alarmId)
+
     suspend fun allActiveInstances(): List<AlarmInstanceEntity> = instanceDao.getAllActive()
 
     suspend fun getInstance(id: Long): AlarmInstanceEntity? = instanceDao.getById(id)
