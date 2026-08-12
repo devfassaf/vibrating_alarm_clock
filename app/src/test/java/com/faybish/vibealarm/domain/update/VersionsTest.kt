@@ -26,11 +26,12 @@ class VersionsTest {
      */
     @Test
     fun `invisible bidi and zero-width marks are stripped before parsing`() {
-        val marks = listOf("‏", "‎", "‫", "⁦", "​", "﻿")
+        // RLM, LRM, LRE, LRI, ZWSP, BOM — named, because they are invisible on screen.
+        val marks = listOf("\u200f", "\u200e", "\u202a", "\u2066", "\u200b", "\ufeff")
         marks.forEach { mark ->
-            assertThat(Versions.parse("$mark v1.2.3 ")).isEqualTo(Triple(1, 2, 3))
-            assertThat(Versions.parse("v1.2.3$mark")).isEqualTo(Triple(1, 2, 3))
-            assertThat(Versions.isDeliverable("v1.2.3$mark")).isTrue()
+            assertThat(Versions.parse(mark + " v1.2.3 ")).isEqualTo(Triple(1, 2, 3))
+            assertThat(Versions.parse("v1.2.3" + mark)).isEqualTo(Triple(1, 2, 3))
+            assertThat(Versions.isDeliverable("v1.2.3" + mark)).isTrue()
         }
     }
 

@@ -53,7 +53,7 @@ class UpdateDecisionsTest {
 
     @Test
     fun `a skipped version with an invisible mark still matches`() {
-        val status = UpdateDecisions.resolveStatus(release("1.0.1"), "1.0.0", "‏1.0.1", silent = true)
+        val status = UpdateDecisions.resolveStatus(release("1.0.1"), "1.0.0", "\u200f1.0.1", silent = true)
         assertThat(status).isEqualTo(UpdateStatus.SKIPPED)
     }
 
@@ -134,7 +134,7 @@ class UpdateDecisionsTest {
     @Test
     fun `an invisible mark in the tag does not break asset matching`() {
         val assets = listOf(ReleaseAsset("vibealarm-v1.0.1.apk", "https://example.test/a.apk", 1))
-        assertThat(UpdateDecisions.pickApkAsset(assets, "‏v1.0.1")?.name)
+        assertThat(UpdateDecisions.pickApkAsset(assets, "\u200fv1.0.1")?.name)
             .isEqualTo("vibealarm-v1.0.1.apk")
     }
 }

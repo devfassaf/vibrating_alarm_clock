@@ -11,8 +11,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
@@ -21,7 +24,9 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.faybish.vibealarm.R
 import kotlin.math.roundToInt
 
 /** Setting row: title on the start side, current value on the end, whole row tappable. */
@@ -127,7 +132,13 @@ fun <T> OptionChips(
     }
 }
 
-/** Slider that reports a 0..1 fraction and shows it as a percentage. */
+/**
+ * Slider that reports a 0..1 fraction and shows it as a percentage.
+ *
+ * @param onPreview when set, adds a play button and is also called once the user lifts
+ *   their finger. Dragging fires dozens of updates a second, so previewing on every one
+ *   would stutter — the release is the moment the chosen value actually means something.
+ */
 @Composable
 fun PercentSlider(
     title: String,
@@ -136,6 +147,7 @@ fun PercentSlider(
     modifier: Modifier = Modifier,
     valueRange: ClosedFloatingPointRange<Float> = 0f..1f,
     leadingIcon: ImageVector? = null,
+    onPreview: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.padding(vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -154,7 +166,23 @@ fun PercentSlider(
                 style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.primary,
             )
+            if (onPreview != null) {
+                IconButton(onClick = onPreview, modifier = Modifier.size(36.dp)) {
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = stringResource(R.string.action_test),
+                        modifier = Modifier.size(20.dp),
+                    )
+                }
+            }
         }
-        Slider(value = value, onValueChange = onValueChange, valueRange = valueRange)
+        Slider(
+            value = value,
+            onValueChange = onValueChange,
+            valueRange = valueRange,
+            // Fires once, when the finger comes up — the moment the chosen value means
+            // something. Previewing on every drag update would stutter badly.
+            onValueChangeFinished = onPreview,
+        )
     }
 }

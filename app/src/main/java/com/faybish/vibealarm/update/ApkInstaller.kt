@@ -4,7 +4,6 @@ import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
 import androidx.core.content.FileProvider
 import androidx.core.net.toUri
@@ -36,9 +35,7 @@ sealed interface InstallResult {
  */
 class ApkInstaller(private val context: Context) {
 
-    fun canInstallPackages(): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.O ||
-            context.packageManager.canRequestPackageInstalls()
+    fun canInstallPackages(): Boolean = context.packageManager.canRequestPackageInstalls()
 
     fun install(apk: File): InstallResult {
         if (!apk.isFile) return InstallResult.Failed("file-missing")
@@ -69,7 +66,6 @@ class ApkInstaller(private val context: Context) {
 
     /** Opens the system page where "install unknown apps" is granted for this app. */
     fun openInstallPermissionSettings(): Boolean {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return false
         val intent = Intent(
             Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
             "package:${context.packageName}".toUri(),
