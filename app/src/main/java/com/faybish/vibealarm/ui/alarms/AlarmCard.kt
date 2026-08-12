@@ -9,8 +9,10 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -20,6 +22,7 @@ import androidx.compose.material.icons.filled.Vibration
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,6 +45,8 @@ import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.RingMode
 import com.faybish.vibealarm.data.ScheduleCodec
+import com.faybish.vibealarm.data.applying
+import com.faybish.vibealarm.domain.AlertSelection
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
 import com.faybish.vibealarm.ui.components.LabeledRow
@@ -149,18 +154,25 @@ fun AlarmCard(
                             .padding(vertical = 8.dp),
                     )
 
-                    RingModeSelector(alarm, onAlarmChange)
-
-                    LabeledRow(
-                        title = stringResource(R.string.field_vibration_pattern),
-                        value = patternName ?: stringResource(R.string.pattern_default),
-                        leadingIcon = Icons.Filled.Vibration,
-                        onClick = onPickPattern,
+                    // Two independent switches, and each one's settings appear only when
+                    // it is on — so the screen shows exactly what this alarm will do.
+                    val alert = AlertSelection.fromStorage(
+                        soundMode = alarm.mode == RingMode.SOUND,
+                        vibrateWithSound = alarm.vibrateWithSound,
                     )
+                    AlertSelector(alert) { onAlarmChange(alarm.applying(it)) }
 
-                    IntensitySlider(alarm, onAlarmChange, onPreviewVibration)
+                    if (alert.vibration) {
+                        LabeledRow(
+                            title = stringResource(R.string.field_vibration_pattern),
+                            value = patternName ?: stringResource(R.string.pattern_default),
+                            leadingIcon = Icons.Filled.Vibration,
+                            onClick = onPickPattern,
+                        )
+                        IntensitySlider(alarm, onAlarmChange, onPreviewVibration)
+                    }
 
-                    if (alarm.mode == RingMode.SOUND) {
+                    if (alert.sound) {
                         SoundSettings(alarm, onAlarmChange, onPreviewSound)
                     }
 
@@ -256,17 +268,47 @@ private fun PerDayTimes(schedule: Schedule.Weekly) {
     )
 }
 
+/**
+ * Sound and vibration as two independent choices, which is how people describe what they
+ * want. Tapping the only one that is on does nothing — that is deliberate, and the line
+ * underneath says why rather than leaving a switch that mysteriously refuses to move.
+ */
 @Composable
-private fun RingModeSelector(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) {
-    OptionChips(
-        title = stringResource(R.string.field_ring_mode),
-        options = listOf(
-            RingMode.VIBRATE_ONLY to stringResource(R.string.ring_mode_vibrate_only),
-            RingMode.SOUND to stringResource(R.string.ring_mode_sound),
-        ),
-        selected = alarm.mode,
-        onSelected = { onChange(alarm.copy(mode = it)) },
-    )
+private fun AlertSelector(alert: AlertSelection, onChange: (AlertSelection) -> Unit) {
+    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+        Text(
+            text = stringResource(R.string.field_ring_mode),
+            style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(
+            modifier = Modifier.padding(top = 6.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            FilterChip(
+                selected = alert.sound,
+                onClick = { onChange(alert.toggleSound()) },
+                label = { Text(stringResource(R.string.alert_sound)) },
+                leadingIcon = {
+                    if (alert.sound) Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(18.dp))
+                },
+            )
+            FilterChip(
+                selected = alert.vibration,
+                onClick = { onChange(alert.toggleVibration()) },
+                label = { Text(stringResource(R.string.alert_vibration)) },
+                leadingIcon = {
+                    if (alert.vibration) Icon(Icons.Filled.Check, contentDescription = null, Modifier.size(18.dp))
+                },
+            )
+        }
+        Text(
+            text = stringResource(R.string.alert_at_least_one),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
 }
 
 @Composable
@@ -275,13 +317,22 @@ private fun IntensitySlider(
     onChange: (AlarmEntity) -> Unit,
     onPreview: () -> Unit,
 ) {
-    PercentSlider(
-        title = stringResource(R.string.field_vibration_intensity),
-        value = alarm.intensityScale,
-        valueRange = 0.1f..1f,
-        onValueChange = { onChange(alarm.copy(intensityScale = it)) },
-        onPreview = onPreview,
-    )
+    Column {
+        PercentSlider(
+            title = stringResource(R.string.field_vibration_intensity),
+            value = alarm.intensityScale,
+            valueRange = 0.1f..1f,
+            onValueChange = { onChange(alarm.copy(intensityScale = it)) },
+            onPreview = onPreview,
+        )
+        // Without this line the slider looks like it competes with the pattern's own
+        // per-step strengths, when in fact it scales all of them together.
+        Text(
+            text = stringResource(R.string.field_vibration_intensity_hint),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
 }
 
 @Composable
@@ -307,11 +358,6 @@ private fun SoundSettings(
             onValueChange = { onChange(alarm.copy(volume = it)) },
             leadingIcon = Icons.Filled.MusicNote,
             onPreview = onPreview,
-        )
-        com.faybish.vibealarm.ui.components.SwitchRow(
-            title = stringResource(R.string.field_vibrate_with_sound),
-            checked = alarm.vibrateWithSound,
-            onCheckedChange = { onChange(alarm.copy(vibrateWithSound = it)) },
         )
         OptionChips(
             title = stringResource(R.string.field_auto_silence),

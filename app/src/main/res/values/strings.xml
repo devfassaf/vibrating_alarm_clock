@@ -56,7 +56,6 @@
     <string name="field_ringtone_hint">A sound you pick from your own storage may be unreadable after a restart until the phone is unlocked; the system default is used then. Vibration always works.</string>
     <string name="ringtone_default">Default alarm sound</string>
     <string name="field_volume">Volume</string>
-    <string name="field_vibrate_with_sound">Vibrate as well</string>
     <string name="field_auto_silence">Ring for</string>
     <string name="field_snooze_interval">Snooze interval</string>
     <string name="field_snooze_repeats">Snooze repeats</string>
@@ -66,8 +65,10 @@
     <string name="field_intensity">Intensity</string>
     <string name="field_pattern_name">Pattern name</string>
 
-    <string name="ring_mode_vibrate_only">Vibration only</string>
-    <string name="ring_mode_sound">Sound</string>
+    <string name="alert_sound">Sound</string>
+    <string name="alert_vibration">Vibration</string>
+    <string name="alert_at_least_one">At least one has to stay on — an alarm that neither sounds nor vibrates is not an alarm.</string>
+    <string name="field_vibration_intensity_hint">Scales the whole pattern. The pattern itself sets how strong each buzz is relative to the others; this dials all of them up or down together.</string>
     <string name="snooze_repeats_none">None</string>
     <string name="snooze_repeats_until_dismissed">Until dismissed</string>
     <string name="snooze_until_dismissed_warning">With the screen off, nothing can stop this alarm without touching the phone — it will keep vibrating. Pick a number of repeats for a hands-free alarm.</string>
@@ -113,6 +114,8 @@
     <string name="check_battery_description">Stops the system from deferring the alarm while the phone sleeps.</string>
     <string name="check_amplitude">Vibration strength control</string>
     <string name="check_amplitude_description">Whether the hardware can vary strength. If not, intensity is emulated with short pulses.</string>
+    <string name="check_system_vibration">System vibration strength</string>
+    <string name="check_system_vibration_description">The app already asks for the strongest vibration the hardware can produce — 255 is the ceiling, not a setting here. Android then scales it by the system\'s own vibration strength, so if that is not at maximum even the strongest pattern arrives weakened. Raise "Vibration intensity" for alarms in the system sound settings.</string>
     <string name="check_oem">Samsung background limits</string>
     <string name="check_oem_description">In Device care → Battery, keep this app out of "Sleeping apps" and turn off "Put unused apps to sleep". Being put to sleep cancels every scheduled alarm, and no app can detect it.</string>
     <string name="reliability_no_settings_page">This device has no settings page for that; open it manually from system settings.</string>

@@ -22,6 +22,7 @@ enum class CheckId {
     FULL_SCREEN_INTENT,
     BATTERY_OPTIMIZATION,
     AMPLITUDE_CONTROL,
+    SYSTEM_VIBRATION_STRENGTH,
     OEM_BACKGROUND_LIMITS,
 }
 
@@ -57,6 +58,7 @@ class ReliabilityChecks(
         fullScreenIntent(),
         batteryOptimization(),
         amplitudeControl(),
+        systemVibrationStrength(),
         oemBackgroundLimits(),
     )
 
@@ -103,6 +105,18 @@ class ReliabilityChecks(
     )
 
     /**
+     * The app already asks the vibrator for its maximum (amplitude 255 is the hardware
+     * ceiling, not a choice this app makes). The system's own vibration-intensity setting
+     * scales everything on top of that, so if it is not at maximum the strongest pattern
+     * still arrives weakened — and there is no API to read it, hence a manual pointer.
+     */
+    private fun systemVibrationStrength() = CheckResult(
+        id = CheckId.SYSTEM_VIBRATION_STRENGTH,
+        status = CheckStatus.MANUAL,
+        fixable = true,
+    )
+
+    /**
      * Samsung's "put unused apps to sleep" (and its equivalents elsewhere) can
      * force-stop the app, which silently cancels every scheduled alarm. There is
      * no API to read that list, so this one is a guided manual step.
@@ -141,6 +155,12 @@ class ReliabilityChecks(
                 start(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
 
         CheckId.AMPLITUDE_CONTROL -> false
+
+        // No public intent lands on the vibration-intensity page itself; the sound
+        // settings screen is one tap away from it on both stock Android and One UI.
+        CheckId.SYSTEM_VIBRATION_STRENGTH ->
+            start(Intent(Settings.ACTION_SOUND_SETTINGS)) ||
+                start(Intent(Settings.ACTION_SETTINGS))
 
         // Device Care's activity names differ across One UI versions and are not
         // public API, so try the known ones and fall back to the app's own page.
