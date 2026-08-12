@@ -126,3 +126,12 @@ data class ReliabilityLogEntity(
     val event: String,
     val detail: String = "",
 )
+
+/**
+ * Writes an [com.faybish.vibealarm.domain.AlertSelection] back to the two columns that
+ * have always encoded it. Kept here so the mapping lives next to the columns it targets.
+ */
+fun AlarmEntity.applying(alert: com.faybish.vibealarm.domain.AlertSelection): AlarmEntity = copy(
+    mode = if (alert.storedAsSoundMode) RingMode.SOUND else RingMode.VIBRATE_ONLY,
+    vibrateWithSound = alert.storedVibrateWithSound,
+)

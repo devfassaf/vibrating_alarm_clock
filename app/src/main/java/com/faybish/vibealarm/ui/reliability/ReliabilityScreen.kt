@@ -279,6 +279,7 @@ private fun checkTitle(id: CheckId): String = stringResource(
         CheckId.FULL_SCREEN_INTENT -> R.string.check_full_screen
         CheckId.BATTERY_OPTIMIZATION -> R.string.check_battery
         CheckId.AMPLITUDE_CONTROL -> R.string.check_amplitude
+        CheckId.SYSTEM_VIBRATION_STRENGTH -> R.string.check_system_vibration
         CheckId.OEM_BACKGROUND_LIMITS -> R.string.check_oem
     },
 )
@@ -291,6 +292,7 @@ private fun checkDescription(id: CheckId): String = stringResource(
         CheckId.FULL_SCREEN_INTENT -> R.string.check_full_screen_description
         CheckId.BATTERY_OPTIMIZATION -> R.string.check_battery_description
         CheckId.AMPLITUDE_CONTROL -> R.string.check_amplitude_description
+        CheckId.SYSTEM_VIBRATION_STRENGTH -> R.string.check_system_vibration_description
         CheckId.OEM_BACKGROUND_LIMITS -> R.string.check_oem_description
     },
 )

@@ -56,7 +56,6 @@
     <string name="field_ringtone_hint">צלצול שנבחר מהאחסון שלכם עלול לא להיות נגיש אחרי ריסט עד שפותחים את הנעילה; אז מושמע צלצול ברירת המחדל של המערכת. הרטט תמיד עובד.</string>
     <string name="ringtone_default">צלצול ברירת המחדל</string>
     <string name="field_volume">עוצמת צליל</string>
-    <string name="field_vibrate_with_sound">גם רטט</string>
     <string name="field_auto_silence">משך צלצול</string>
     <string name="field_snooze_interval">מרווח נודניק</string>
     <string name="field_snooze_repeats">חזרות נודניק</string>
@@ -66,8 +65,10 @@
     <string name="field_intensity">עוצמה</string>
     <string name="field_pattern_name">שם התבנית</string>
 
-    <string name="ring_mode_vibrate_only">רטט בלבד</string>
-    <string name="ring_mode_sound">צליל</string>
+    <string name="alert_sound">צליל</string>
+    <string name="alert_vibration">רטט</string>
+    <string name="alert_at_least_one">לפחות אחד חייב להישאר מסומן — השכמה שלא מצלצלת ולא רוטטת היא לא השכמה.</string>
+    <string name="field_vibration_intensity_hint">מכפיל את כל התבנית. התבנית קובעת כמה חזק כל רטט ביחס לאחרים, והמחוון מעלה או מוריד את כולם יחד.</string>
     <string name="snooze_repeats_none">בלי</string>
     <string name="snooze_repeats_until_dismissed">עד כיבוי</string>
     <string name="snooze_until_dismissed_warning">כשהמסך כבוי, שום דבר לא יעצור את ההשכמה בלי לגעת בטלפון — היא תמשיך לרטוט. להשכמה ללא מגע בחרו מספר חזרות.</string>
@@ -113,6 +114,8 @@
     <string name="check_battery_description">מונע מהמערכת לדחות את ההשכמה בזמן שהטלפון ישן.</string>
     <string name="check_amplitude">שליטה בעוצמת רטט</string>
     <string name="check_amplitude_description">האם החומרה יכולה לשנות עוצמה. אם לא, העוצמה מדומה בעזרת פולסים קצרים.</string>
+    <string name="check_system_vibration">עוצמת הרטט של המערכת</string>
+    <string name="check_system_vibration_description">האפליקציה כבר מבקשת את הרטט החזק ביותר שהחומרה מסוגלת לו — 255 היא התקרה, לא הגדרה כאן. אנדרואיד מכפילה אותו בעוצמת הרטט של המערכת, ולכן אם היא לא במקסימום גם התבנית החזקה ביותר תגיע מוחלשת. העלו את "עוצמת רטט" עבור התרעות בהגדרות הצליל של המערכת.</string>
     <string name="check_oem">הגבלות רקע של סמסונג</string>
     <string name="check_oem_description">בטיפול במכשיר → סוללה, ודאו שהאפליקציה לא ברשימת "אפליקציות ישנות" ושהאפשרות "העברת אפליקציות שאינן בשימוש למצב שינה" כבויה. העברה למצב שינה מבטלת כל השכמה מתוזמנת, ואף אפליקציה לא יכולה לזהות זאת.</string>
     <string name="reliability_no_settings_page">במכשיר הזה אין מסך הגדרות לכך; פתחו אותו ידנית מהגדרות המערכת.</string>
