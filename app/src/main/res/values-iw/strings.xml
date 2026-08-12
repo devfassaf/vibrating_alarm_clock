@@ -1,4 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">שעון רוטט</string>
+    <string name="default_alarm_label">השכמה</string>
+
+    <!-- Screen titles -->
+    <string name="title_alarms">שעון מעורר</string>
+    <string name="title_patterns">תבניות רטט</string>
+    <string name="title_pattern_builder">עריכת תבנית</string>
+    <string name="title_recorder">הקלטת תבנית</string>
+    <string name="title_reliability">אמינות</string>
+    <string name="title_settings">הגדרות</string>
+
+    <!-- Generic actions -->
+    <string name="action_ok">אישור</string>
+    <string name="action_cancel">ביטול</string>
+    <string name="action_save">שמירה</string>
+    <string name="action_delete">מחיקה</string>
+    <string name="action_edit">עריכה</string>
+    <string name="action_duplicate">שכפול</string>
+    <string name="action_back">חזרה</string>
+    <string name="action_refresh">רענון</string>
+    <string name="action_test">בדיקה</string>
+    <string name="action_stop">עצירה</string>
+    <string name="action_clear">ניקוי</string>
+    <string name="action_use">שימוש</string>
+    <string name="action_add_alarm">הוספת השכמה</string>
+    <string name="action_add_date">הוספת תאריך</string>
+    <string name="action_new_pattern">תבנית חדשה</string>
+    <string name="action_add_vibration">רטט</string>
+    <string name="action_add_pause">הפסקה</string>
+    <string name="action_record_pattern">הקלטה בהקשות</string>
+    <string name="action_move_up">העברה למעלה</string>
+    <string name="action_move_down">העברה למטה</string>
+    <string name="action_reset_to_default">שעת ברירת המחדל</string>
+    <string name="action_open_settings">פתיחת ההגדרות</string>
+    <string name="action_snooze">נודניק</string>
+    <string name="action_dismiss">כיבוי</string>
+
+    <!-- Alarm list -->
+    <string name="empty_alarms_title">אין עדיין השכמות</string>
+    <string name="empty_alarms_hint">הקישו + כדי להוסיף. בחירת רטט בלבד מאפשרת להתעורר בלי להעיר אף אחד אחר.</string>
+    <string name="time_until_days">בעוד %1$d ימים ו-%2$d שעות</string>
+    <string name="time_until_hours">בעוד %1$d שעות ו-%2$d דקות</string>
+    <string name="time_until_minutes">בעוד %1$d דקות</string>
+
+    <!-- Alarm fields -->
+    <string name="field_schedule">תזמון</string>
+    <string name="field_label">תיאור</string>
+    <string name="field_time">שעה</string>
+    <string name="field_default_time">שעת ברירת מחדל</string>
+    <string name="field_ring_mode">סוג התרעה</string>
+    <string name="field_vibration_pattern">תבנית רטט</string>
+    <string name="field_vibration_intensity">עוצמת רטט</string>
+    <string name="field_volume">עוצמת צליל</string>
+    <string name="field_vibrate_with_sound">גם רטט</string>
+    <string name="field_auto_silence">משך צלצול</string>
+    <string name="field_snooze_interval">מרווח נודניק</string>
+    <string name="field_snooze_repeats">חזרות נודניק</string>
+    <string name="field_turn_screen_on">הדלקת מסך</string>
+    <string name="field_turn_screen_on_hint">כבוי: דבר לא נדלק והטלפון רק רוטט — בלי צורך לגעת בו בשום שלב.</string>
+    <string name="field_duration">אורך</string>
+    <string name="field_intensity">עוצמה</string>
+    <string name="field_pattern_name">שם התבנית</string>
+
+    <string name="ring_mode_vibrate_only">רטט בלבד</string>
+    <string name="ring_mode_sound">צליל</string>
+    <string name="snooze_repeats_none">בלי</string>
+    <string name="snooze_repeats_until_dismissed">עד כיבוי</string>
+    <string name="minutes_short">%1$d דק׳</string>
+    <string name="pattern_default">ברירת מחדל</string>
+
+    <!-- Schedule -->
+    <string name="schedule_kind_once">חד-פעמי</string>
+    <string name="schedule_kind_weekly">שבועי</string>
+    <string name="schedule_kind_dates">תאריכים</string>
+    <string name="schedule_once">פעם אחת</string>
+    <string name="schedule_once_hint">מצלצל בפעם הבאה שהשעה הזו מגיעה, ואז נכבה מעצמו.</string>
+    <string name="schedule_every_day">כל יום</string>
+    <string name="schedule_weekdays">שני–שישי</string>
+    <string name="schedule_weekend">סוף שבוע</string>
+    <string name="schedule_no_days">לא נבחרו ימים</string>
+    <string name="schedule_no_dates">אין עדיין תאריכים</string>
+    <string name="schedule_dates_from">מ-%1$s · %2$d תאריכים</string>
+    <string name="per_day_times_title">שעה לכל יום</string>
+    <string name="per_day_times_hint">הקישו על יום כדי לתת לו שעה משלו, למשל שני ב-7:00 ושלישי ב-8:00 באותה השכמה.</string>
+
+    <!-- Patterns -->
+    <string name="pattern_summary">%1$d מקטעים · %2$s</string>
+    <string name="pattern_in_use">התבנית בשימוש של השכמה קיימת, ולכן אי אפשר למחוק אותה.</string>
+    <string name="pattern_copied_from_preset">השמירה יוצרת עותק שלך; התבנית המובנית נשארת ללא שינוי.</string>
+    <string name="pattern_no_amplitude_control">הטלפון הזה לא יכול לשנות את עוצמת הרטט, ולכן העוצמה מדומה בעזרת פולסים קצרים.</string>
+    <string name="segment_vibrate">%1$d · רטט</string>
+    <string name="segment_pause">%1$d · הפסקה</string>
+    <string name="duration_seconds">%1$s שנ׳</string>
+    <string name="duration_minutes">%1$d:%2$02d</string>
+
+    <!-- Recorder -->
+    <string name="recorder_instructions">לחצו והחזיקו כדי לרטוט, שחררו להפסקה. משך ההחזקה קובע את האורך, וגובה הלחיצה קובע את העוצמה.</string>
+    <string name="recorder_pad_idle">לחצו והחזיקו כאן</string>
+    <string name="recorder_pad_active">הוקלטו %1$d מקטעים</string>
+
+    <!-- Reliability -->
+    <string name="check_exact_alarms">אזעקות מדויקות</string>
+    <string name="check_exact_alarms_description">בלי זה ההשכמה עלולה להתעכב או לא לפעול בכלל.</string>
+    <string name="check_notifications">התראות</string>
+    <string name="check_notifications_description">נדרשות להודעות הצלצול, הנודניק וההחמצה. הרטט עצמו פועל גם בלעדיהן.</string>
+    <string name="check_full_screen">מסך השכמה מלא</string>
+    <string name="check_full_screen_description">מאפשר למסך ההשכמה להופיע מעל מסך הנעילה עם כפתורי הכיבוי והנודניק.</string>
+    <string name="check_battery">פטור מאופטימיזציית סוללה</string>
+    <string name="check_battery_description">מונע מהמערכת לדחות את ההשכמה בזמן שהטלפון ישן.</string>
+    <string name="check_amplitude">שליטה בעוצמת רטט</string>
+    <string name="check_amplitude_description">האם החומרה יכולה לשנות עוצמה. אם לא, העוצמה מדומה בעזרת פולסים קצרים.</string>
+    <string name="check_oem">הגבלות רקע של סמסונג</string>
+    <string name="check_oem_description">בטיפול במכשיר → סוללה, ודאו שהאפליקציה לא ברשימת "אפליקציות ישנות" ושהאפשרות "העברת אפליקציות שאינן בשימוש למצב שינה" כבויה. העברה למצב שינה מבטלת כל השכמה מתוזמנת, ואף אפליקציה לא יכולה לזהות זאת.</string>
+    <string name="reliability_no_settings_page">במכשיר הזה אין מסך הגדרות לכך; פתחו אותו ידנית מהגדרות המערכת.</string>
+    <string name="reliability_log_title">יומן אירועים</string>
+    <string name="reboot_test_title">בדיקת ריסט</string>
+    <string name="reboot_test_description">מתזמן השכמת בדיקה בעוד כמה דקות. הפעילו מחדש את הטלפון ואל תפתחו את הנעילה — אם הוא רוטט על מסך הנעילה, ההשכמות שורדות ריסט בלילה.</string>
+    <string name="reboot_test_start">תזמון בדיקה</string>
+    <string name="reboot_test_scheduled">השכמת בדיקה נקבעה ל-%1$s. הפעילו מחדש עכשיו והשאירו את הטלפון נעול.</string>
+    <string name="reboot_test_waiting">ממתין לריסט ולהשכמת הבדיקה…</string>
+    <string name="reboot_test_passed">עבר: ההשכמה פעלה אחרי ריסט, לפני פתיחת הנעילה.</string>
+    <string name="reboot_test_failed">הטלפון הופעל מחדש אבל השכמת הבדיקה לא פעלה. בדקו את הסעיפים שלמעלה.</string>
+
+    <!-- Settings -->
+    <string name="setting_volume_keys_snooze">כפתורי עוצמה = נודניק</string>
+    <string name="setting_volume_keys_snooze_hint">עובד כשמסך ההשכמה מוצג. כשהמסך כבוי, אנדרואיד לא מאפשר לאפליקציות לזהות את כפתורי העוצמה.</string>
+    <string name="settings_advanced">מתקדם</string>
+    <string name="setting_force_pwm">הדמיית עוצמת רטט</string>
+    <string name="setting_force_pwm_hint">אבחון: מאלץ את מסלול הפולסים שמשמש טלפונים שאינם יכולים לשנות עוצמת רטט.</string>
+    <string name="settings_about_body">שעון מעורר רוטט. השכמת רטט בלבד מנגנת את התבנית פעם אחת, נעצרת מעצמה, ואז עוברת לנודניק ולבסוף נכבית — בלי לגעת בטלפון.</string>
+
+    <!-- Notification channels -->
+    <string name="channel_alerting_name">השכמה מצלצלת</string>
+    <string name="channel_alerting_description">מוצג במסך מלא בזמן שההשכמה פועלת.</string>
+    <string name="channel_silent_name">השכמה שקטה (מסך כבוי)</string>
+    <string name="channel_silent_description">בשימוש השכמות רטט בלבד, כדי שדבר לא ידליק את המסך.</string>
+    <string name="channel_status_name">מצב ההשכמה</string>
+    <string name="channel_status_description">הודעות על נודניק ועל השכמה שהוחמצה.</string>
+
+    <!-- Notifications -->
+    <string name="notification_firing_text">השכמה</string>
+    <string name="notification_snoozed_until">נודניק עד %1$s</string>
+    <string name="notification_snoozed_until_remaining">נודניק עד %1$s · נשארו %2$d</string>
+    <string name="notification_missed_title">השכמה הוחמצה</string>
+    <string name="notification_missed_text">%1$s הייתה מיועדת ל-%2$s</string>
+
+    <!-- Vibration presets -->
+    <string name="pattern_preset_gentle">עדינה</string>
+    <string name="pattern_preset_heartbeat">דופק לב</string>
+    <string name="pattern_preset_sos">SOS</string>
+    <string name="pattern_preset_waves">גלים</string>
+    <string name="pattern_preset_escalating">מתגברת</string>
 </resources>

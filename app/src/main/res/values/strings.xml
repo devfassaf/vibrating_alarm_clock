@@ -1,4 +1,155 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">VibeAlarm</string>
+    <string name="default_alarm_label">Alarm</string>
+
+    <!-- Screen titles -->
+    <string name="title_alarms">Alarm</string>
+    <string name="title_patterns">Vibration patterns</string>
+    <string name="title_pattern_builder">Edit pattern</string>
+    <string name="title_recorder">Record pattern</string>
+    <string name="title_reliability">Reliability</string>
+    <string name="title_settings">Settings</string>
+
+    <!-- Generic actions -->
+    <string name="action_ok">OK</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_save">Save</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_duplicate">Duplicate</string>
+    <string name="action_back">Back</string>
+    <string name="action_refresh">Refresh</string>
+    <string name="action_test">Test</string>
+    <string name="action_stop">Stop</string>
+    <string name="action_clear">Clear</string>
+    <string name="action_use">Use</string>
+    <string name="action_add_alarm">Add alarm</string>
+    <string name="action_add_date">Add date</string>
+    <string name="action_new_pattern">New pattern</string>
+    <string name="action_add_vibration">Vibration</string>
+    <string name="action_add_pause">Pause</string>
+    <string name="action_record_pattern">Record by tapping</string>
+    <string name="action_move_up">Move up</string>
+    <string name="action_move_down">Move down</string>
+    <string name="action_reset_to_default">Use default time</string>
+    <string name="action_open_settings">Open settings</string>
+    <string name="action_snooze">Snooze</string>
+    <string name="action_dismiss">Dismiss</string>
+
+    <!-- Alarm list -->
+    <string name="empty_alarms_title">No alarms yet</string>
+    <string name="empty_alarms_hint">Tap + to add one. Choose vibration-only to wake up without waking anyone else.</string>
+    <string name="time_until_days">in %1$d d %2$d h</string>
+    <string name="time_until_hours">in %1$d h %2$d min</string>
+    <string name="time_until_minutes">in %1$d min</string>
+
+    <!-- Alarm fields -->
+    <string name="field_schedule">Schedule</string>
+    <string name="field_label">Label</string>
+    <string name="field_time">Time</string>
+    <string name="field_default_time">Default time</string>
+    <string name="field_ring_mode">Alert</string>
+    <string name="field_vibration_pattern">Vibration pattern</string>
+    <string name="field_vibration_intensity">Vibration intensity</string>
+    <string name="field_volume">Volume</string>
+    <string name="field_vibrate_with_sound">Vibrate as well</string>
+    <string name="field_auto_silence">Ring for</string>
+    <string name="field_snooze_interval">Snooze interval</string>
+    <string name="field_snooze_repeats">Snooze repeats</string>
+    <string name="field_turn_screen_on">Turn screen on</string>
+    <string name="field_turn_screen_on_hint">Off: nothing lights up and the phone only vibrates — no touch needed at any point.</string>
+    <string name="field_duration">Length</string>
+    <string name="field_intensity">Intensity</string>
+    <string name="field_pattern_name">Pattern name</string>
+
+    <string name="ring_mode_vibrate_only">Vibration only</string>
+    <string name="ring_mode_sound">Sound</string>
+    <string name="snooze_repeats_none">None</string>
+    <string name="snooze_repeats_until_dismissed">Until dismissed</string>
+    <string name="minutes_short">%1$d min</string>
+    <string name="pattern_default">Default</string>
+
+    <!-- Schedule -->
+    <string name="schedule_kind_once">Once</string>
+    <string name="schedule_kind_weekly">Weekly</string>
+    <string name="schedule_kind_dates">Dates</string>
+    <string name="schedule_once">Once</string>
+    <string name="schedule_once_hint">Rings at the next occurrence of this time, then turns itself off.</string>
+    <string name="schedule_every_day">Every day</string>
+    <string name="schedule_weekdays">Mon–Fri</string>
+    <string name="schedule_weekend">Weekend</string>
+    <string name="schedule_no_days">No days selected</string>
+    <string name="schedule_no_dates">No dates yet</string>
+    <string name="schedule_dates_from">From %1$s · %2$d dates</string>
+    <string name="per_day_times_title">Time per day</string>
+    <string name="per_day_times_hint">Tap a day to give it its own time, e.g. Monday 07:00 and Tuesday 08:00 in the same alarm.</string>
+
+    <!-- Patterns -->
+    <string name="pattern_summary">%1$d steps · %2$s</string>
+    <string name="pattern_in_use">This pattern is used by an alarm, so it cannot be deleted.</string>
+    <string name="pattern_copied_from_preset">Saving creates your own copy; the built-in pattern stays unchanged.</string>
+    <string name="pattern_no_amplitude_control">This phone cannot vary vibration strength, so intensity is emulated with short pulses.</string>
+    <string name="segment_vibrate">%1$d · Vibration</string>
+    <string name="segment_pause">%1$d · Pause</string>
+    <string name="duration_seconds">%1$s s</string>
+    <string name="duration_minutes">%1$d:%2$02d</string>
+
+    <!-- Recorder -->
+    <string name="recorder_instructions">Press and hold to vibrate, release for a pause. How long you hold sets the length; how high up you press sets the strength.</string>
+    <string name="recorder_pad_idle">Press and hold here</string>
+    <string name="recorder_pad_active">%1$d steps recorded</string>
+
+    <!-- Reliability -->
+    <string name="check_exact_alarms">Exact alarms</string>
+    <string name="check_exact_alarms_description">Without this the alarm may be delayed or skipped entirely.</string>
+    <string name="check_notifications">Notifications</string>
+    <string name="check_notifications_description">Needed for the ringing, snoozed and missed notices. The vibration itself still works without it.</string>
+    <string name="check_full_screen">Full-screen alarm</string>
+    <string name="check_full_screen_description">Lets the alarm screen appear over the lock screen with its Dismiss and Snooze buttons.</string>
+    <string name="check_battery">Battery optimization exemption</string>
+    <string name="check_battery_description">Stops the system from deferring the alarm while the phone sleeps.</string>
+    <string name="check_amplitude">Vibration strength control</string>
+    <string name="check_amplitude_description">Whether the hardware can vary strength. If not, intensity is emulated with short pulses.</string>
+    <string name="check_oem">Samsung background limits</string>
+    <string name="check_oem_description">In Device care → Battery, keep this app out of "Sleeping apps" and turn off "Put unused apps to sleep". Being put to sleep cancels every scheduled alarm, and no app can detect it.</string>
+    <string name="reliability_no_settings_page">This device has no settings page for that; open it manually from system settings.</string>
+    <string name="reliability_log_title">Event log</string>
+    <string name="reboot_test_title">Reboot test</string>
+    <string name="reboot_test_description">Schedules a test alarm a few minutes out. Restart the phone and do NOT unlock it — if it vibrates on the lock screen, alarms survive a night-time restart.</string>
+    <string name="reboot_test_start">Schedule test</string>
+    <string name="reboot_test_scheduled">Test alarm set for %1$s. Restart now and leave the phone locked.</string>
+    <string name="reboot_test_waiting">Waiting for the restart and the test alarm…</string>
+    <string name="reboot_test_passed">Passed: the alarm fired after a restart before unlocking.</string>
+    <string name="reboot_test_failed">The phone restarted but the test alarm did not fire. Check the items above.</string>
+
+    <!-- Settings -->
+    <string name="setting_volume_keys_snooze">Volume keys snooze</string>
+    <string name="setting_volume_keys_snooze_hint">Works while the alarm screen is showing. With the screen off, Android does not let apps see the volume keys.</string>
+    <string name="settings_advanced">Advanced</string>
+    <string name="setting_force_pwm">Emulate vibration strength</string>
+    <string name="setting_force_pwm_hint">Diagnostic: forces the pulse-based fallback used on phones that cannot vary vibration strength.</string>
+    <string name="settings_about_body">A vibration-only alarm clock. A vibration-only alarm plays its pattern once, stops on its own, then snoozes and finally turns itself off — without the phone being touched.</string>
+
+    <!-- Notification channels -->
+    <string name="channel_alerting_name">Ringing alarm</string>
+    <string name="channel_alerting_description">Shown full screen while an alarm is ringing.</string>
+    <string name="channel_silent_name">Silent alarm (screen off)</string>
+    <string name="channel_silent_description">Used by vibration-only alarms so nothing lights up the screen.</string>
+    <string name="channel_status_name">Alarm status</string>
+    <string name="channel_status_description">Snoozed and missed alarm notices.</string>
+
+    <!-- Notifications -->
+    <string name="notification_firing_text">Alarm</string>
+    <string name="notification_snoozed_until">Snoozed until %1$s</string>
+    <string name="notification_snoozed_until_remaining">Snoozed until %1$s · %2$d left</string>
+    <string name="notification_missed_title">Missed alarm</string>
+    <string name="notification_missed_text">%1$s was due at %2$s</string>
+
+    <!-- Vibration presets -->
+    <string name="pattern_preset_gentle">Gentle</string>
+    <string name="pattern_preset_heartbeat">Heartbeat</string>
+    <string name="pattern_preset_sos">SOS</string>
+    <string name="pattern_preset_waves">Waves</string>
+    <string name="pattern_preset_escalating">Escalating</string>
 </resources>

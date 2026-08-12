@@ -21,6 +21,8 @@ class AlarmRepository(private val db: AppDb) {
 
     suspend fun getAlarm(id: Long): AlarmEntity? = alarmDao.getById(id)
 
+    suspend fun getAllAlarms(): List<AlarmEntity> = alarmDao.getAll()
+
     suspend fun getEnabledAlarms(): List<AlarmEntity> = alarmDao.getEnabled()
 
     suspend fun saveAlarm(alarm: AlarmEntity): Long {
