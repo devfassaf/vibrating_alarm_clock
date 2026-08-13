@@ -25,10 +25,21 @@ object UpdateAssets {
     fun releasesPageUrl(): String = "https://github.com/$REPO/releases"
 
     /**
-     * The explanation and download page, served by GitHub Pages from the repo's docs/
-     * folder. Derived from [REPO] so the two can never point at different projects.
+     * Where the app sends someone who wants to know what this is: the project page, which
+     * renders the README — what the app does, how to install it, and the download button.
+     *
+     * Deliberately **not** [pagesUrl]: `docs/index.html` is only served once the
+     * repository owner switches GitHub Pages on, and until then that address answers 404 —
+     * which is what a "home page" button must never do. The project page always resolves,
+     * and its README links onward to the Pages site for whoever wants the prettier one.
      */
-    fun siteUrl(): String {
+    fun siteUrl(): String = "https://github.com/$REPO#readme"
+
+    /**
+     * The landing page in docs/, once Pages is enabled (Settings → Pages → main, /docs).
+     * Kept here because the release script and the README both point at it.
+     */
+    fun pagesUrl(): String {
         val (owner, repo) = REPO.split('/', limit = 2).let { it[0] to it[1] }
         return "https://$owner.github.io/$repo/"
     }

@@ -58,6 +58,13 @@ class SettingsStore(context: Context, scope: CoroutineScope) {
     val onboardingDone: Flow<Boolean> = read(false) { it[KEY_ONBOARDING_DONE] }
 
     /**
+     * Whether the time picker opens on the keypad instead of the clock face. Remembered
+     * rather than offered as a setting: which one you prefer is something you demonstrate
+     * by using it, and the next alarm should open the way the last one did.
+     */
+    val timeInputByKeyboard: Flow<Boolean> = read(false) { it[KEY_TIME_INPUT_KEYBOARD] }
+
+    /**
      * Debug switch that pretends the device has no vibration amplitude control, so
      * the PWM emulation path can be felt on hardware that does have it. Mirrored
      * into state because the alarm path reads it synchronously.
@@ -74,6 +81,8 @@ class SettingsStore(context: Context, scope: CoroutineScope) {
     suspend fun setForcePwmEmulation(enabled: Boolean) = put(KEY_FORCE_PWM, enabled)
 
     suspend fun setOnboardingDone(done: Boolean) = put(KEY_ONBOARDING_DONE, done)
+
+    suspend fun setTimeInputByKeyboard(keyboard: Boolean) = put(KEY_TIME_INPUT_KEYBOARD, keyboard)
 
     // --- in-app updater state (see DataStoreUpdateStore) ---
 
@@ -126,6 +135,7 @@ class SettingsStore(context: Context, scope: CoroutineScope) {
         val KEY_VOLUME_KEYS_SNOOZE = booleanPreferencesKey("volume_keys_snooze")
         val KEY_FORCE_PWM = booleanPreferencesKey("force_pwm_emulation")
         val KEY_ONBOARDING_DONE = booleanPreferencesKey("onboarding_done")
+        val KEY_TIME_INPUT_KEYBOARD = booleanPreferencesKey("time_input_keyboard")
         val KEY_DEFAULT_SNOOZE_MINUTES = intPreferencesKey("default_snooze_minutes")
         val KEY_DEFAULT_SNOOZE_COUNT = intPreferencesKey("default_snooze_count")
         val KEY_UPDATE_SKIPPED = stringPreferencesKey("update_skipped_version")

@@ -123,22 +123,17 @@ class AlarmListViewModel : ViewModel() {
      * [withEditsFrom] — so a save cannot resurrect an alarm that finished while the card
      * was open.
      *
-     * @param keepEditing true when the card stays open (the save button), false when the
-     *   save is what closes it (answering the unsaved-changes question).
+     * Saving also switches the alarm **on**: pressing save on an alarm means wanting it,
+     * and an edit that left it off would be a silent morning wearing the appearance of a
+     * saved alarm. The editor closes with it — there is nothing left to edit, and the
+     * confirmation says what the alarm will now do.
      */
-    fun commitDraft(
-        keepEditing: Boolean = true,
-        onSaved: (AlarmEntity, Instant?) -> Unit = { _, _ -> },
-    ) {
+    fun commitDraft(onSaved: (AlarmEntity, Instant?) -> Unit = { _, _ -> }) {
         val draft = _draft.value ?: return
+        _draft.value = null
         viewModelScope.launch {
-            val fresh = repository.getAlarm(draft.id)
-            if (fresh == null) {
-                _draft.value = null
-                return@launch
-            }
-            val saved = persist(fresh.withEditsFrom(draft))
-            _draft.value = saved.takeIf { keepEditing }
+            val fresh = repository.getAlarm(draft.id) ?: return@launch
+            val saved = persist(fresh.withEditsFrom(draft).copy(enabled = true))
             onSaved(saved, nextTrigger(saved))
         }
     }
