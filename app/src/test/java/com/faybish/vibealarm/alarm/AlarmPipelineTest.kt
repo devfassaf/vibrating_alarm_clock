@@ -2,9 +2,12 @@ package com.faybish.vibealarm.alarm
 
 import android.app.AlarmManager
 import android.app.Application
+import android.app.Notification
+import android.app.NotificationManager
 import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
+import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.AlarmInstanceEntity
 import com.faybish.vibealarm.data.AlarmRepository
@@ -58,6 +61,7 @@ class AlarmPipelineTest {
     private lateinit var scheduler: AlarmScheduler
     private lateinit var runtime: SessionRuntime
     private lateinit var sink: RecordingSink
+    private lateinit var notifications: AlarmNotifications
 
     private val zone: ZoneId = ZoneId.of("Asia/Jerusalem")
     private val alarmManager: AlarmManager
@@ -92,7 +96,8 @@ class AlarmPipelineTest {
         repository = AlarmRepository(db)
         val logger = ReliabilityLogger(db.logDao(), CoroutineScope(Dispatchers.Unconfined))
         scheduler = AlarmScheduler(context, repository, logger) { zone }
-        runtime = SessionRuntime(context, repository, scheduler, AlarmNotifications(context), logger)
+        notifications = AlarmNotifications(context).also { it.ensureChannels() }
+        runtime = SessionRuntime(context, repository, scheduler, notifications, logger)
         sink = RecordingSink()
         // Android 12+ gates exact alarms behind a permission, and the shadow starts
         // without it. Grant it here; `no exact alarm permission` covers the other case.
@@ -103,6 +108,19 @@ class AlarmPipelineTest {
     fun tearDown() = db.close()
 
     private fun scheduledAlarms() = shadowOf(alarmManager).scheduledAlarms
+
+    private fun postedTitles(): List<String?> =
+        shadowOf(context.getSystemService(NotificationManager::class.java))
+            .allNotifications
+            .map { it.extras.getString(Notification.EXTRA_TITLE) }
+
+    private fun unattendedNotice(): Notification? =
+        shadowOf(context.getSystemService(NotificationManager::class.java))
+            .allNotifications
+            .firstOrNull {
+                it.extras.getString(Notification.EXTRA_TITLE) ==
+                    context.getString(R.string.notification_unattended_title)
+            }
 
     private suspend fun createAlarm(alarm: AlarmEntity): AlarmEntity {
         val id = repository.saveAlarm(alarm)
@@ -240,6 +258,77 @@ class AlarmPipelineTest {
         assertThat(scheduledAlarms().single().triggerAtTime).isEqualTo(next.nextActionEpochMillis)
         // Every ring stopped its own output.
         assertThat(sink.stopped).hasSize(3)
+    }
+
+    /**
+     * The morning after, this notice is the only thing on the phone that says the alarm
+     * worked. Before it existed, CancelNotifications wiped every trace at the end of the
+     * chain, and a Shabbat morning that went perfectly looked exactly like one where the
+     * alarm had failed.
+     */
+    @Test
+    fun `a chain that ran itself out leaves a notice saying it was never dismissed`() = runTest {
+        val alarm = createAlarm(
+            ScheduleCodec.encode(
+                Schedule.Weekly(DayOfWeek.entries.toSet(), LocalTime.of(7, 0)),
+                vibrateOnlyAlarm(snoozeRepeatCount = 1, snoozeIntervalMinutes = 5),
+            ),
+        )
+        val instanceId = repository.activeInstance(alarm.id)!!.id
+
+        var now = Instant.now()
+        runtime.handle(alarm.id, SessionEvent.Fire(now), sink, instanceId)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(now), sink, instanceId)
+        now = Instant.ofEpochMilli(repository.activeInstance(alarm.id)!!.nextActionEpochMillis)
+        runtime.handle(alarm.id, SessionEvent.Fire(now), sink, instanceId)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(now), sink, instanceId)
+
+        assertThat(db.instanceDao().getById(instanceId)!!.endedReason)
+            .isEqualTo(EndedReason.AUTO_DISMISSED)
+
+        // Survived CancelNotifications, which runs earlier in the same transition.
+        val notice = unattendedNotice()
+        assertThat(notice).isNotNull()
+        assertThat(notice!!.extras.getString(Notification.EXTRA_TEXT)).contains("2")
+    }
+
+    @Test
+    fun `switching the alarm off yourself leaves no notice behind`() = runTest {
+        val alarm = createAlarm(vibrateOnlyAlarm(snoozeRepeatCount = 3))
+        val instanceId = repository.activeInstance(alarm.id)!!.id
+
+        runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, instanceId)
+        runtime.handle(alarm.id, SessionEvent.UserDismiss(Instant.now()), sink, instanceId)
+
+        assertThat(db.instanceDao().getById(instanceId)!!.endedReason)
+            .isEqualTo(EndedReason.USER_DISMISSED)
+        assertThat(unattendedNotice()).isNull()
+    }
+
+    /** Yesterday's notice must not sit next to tonight's alarm as if it were about it. */
+    @Test
+    fun `the next ring clears the notice from the morning before`() = runTest {
+        val alarm = createAlarm(
+            ScheduleCodec.encode(
+                Schedule.Weekly(DayOfWeek.entries.toSet(), LocalTime.of(7, 0)),
+                vibrateOnlyAlarm(snoozeRepeatCount = 0),
+            ),
+        )
+        val firstInstance = repository.activeInstance(alarm.id)!!.id
+
+        runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, firstInstance)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, firstInstance)
+        assertThat(unattendedNotice()).isNotNull()
+
+        // Tomorrow's occurrence rings.
+        val nextInstance = repository.activeInstance(alarm.id)!!.id
+        assertThat(nextInstance).isNotEqualTo(firstInstance)
+        runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, nextInstance)
+
+        assertThat(unattendedNotice()).isNull()
+        assertThat(postedTitles()).doesNotContain(
+            context.getString(R.string.notification_unattended_title),
+        )
     }
 
     @Test

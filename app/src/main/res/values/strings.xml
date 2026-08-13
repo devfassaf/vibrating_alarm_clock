@@ -166,13 +166,14 @@
     <string name="channel_silent_name">Silent alarm (screen off)</string>
     <string name="channel_silent_description">Used by vibration-only alarms so nothing lights up the screen.</string>
     <string name="channel_status_name">Alarm status</string>
-    <string name="channel_status_description">Snoozed and missed alarm notices.</string>
+    <string name="channel_status_description">Snoozed, missed, and not-dismissed alarm notices.</string>
 
     <!-- Notifications -->
     <string name="notification_firing_text">Alarm</string>
     <string name="notification_snoozed_until">Snoozed until %1$s</string>
     <string name="notification_missed_title">Missed alarm</string>
     <string name="notification_missed_text">%1$s was due at %2$s</string>
+    <string name="notification_unattended_title">Alarm rang and was never dismissed</string>
 
     <!-- Vibration presets -->
     <string name="pattern_preset_gentle">Gentle</string>
@@ -208,6 +209,10 @@
     <plurals name="reliability_banner_title">
         <item quantity="one">%1$d issue could stop an alarm</item>
         <item quantity="other">%1$d issues could stop an alarm</item>
+    </plurals>
+    <plurals name="notification_unattended_text">
+        <item quantity="one">%1$s · rang once at %2$s</item>
+        <item quantity="other">%1$s · rang %4$d times, %2$s to %3$s</item>
     </plurals>
     <plurals name="notification_snoozed_until_remaining">
         <item quantity="one">Snoozed until %1$s · %2$d left</item>

@@ -54,7 +54,8 @@ class AlarmSessionReducerTest {
         }
 
         // Snooze budget (2) is used up — this playback end finishes the chain silently.
-        val (done, doneEffects) = reduce(state, config, SessionEvent.PlaybackComplete(now.plusSeconds(30)))
+        val endedAt = now.plusSeconds(30)
+        val (done, doneEffects) = reduce(state, config, SessionEvent.PlaybackComplete(endedAt))
         assertThat(done.phase).isEqualTo(SessionPhase.DONE)
         assertThat(done.endedReason).isEqualTo(EndReason.AUTO_DISMISSED)
         assertThat(doneEffects).containsExactly(
@@ -62,7 +63,102 @@ class AlarmSessionReducerTest {
             SessionEffect.Persist(done),
             SessionEffect.CancelNotifications,
             SessionEffect.ScheduleNextOccurrence,
+            // Three rings, none of them switched off by hand: the morning after should
+            // say so rather than look like a morning the alarm never went off.
+            SessionEffect.ReportUnattended(
+                firstRingAt = occurrence,
+                endedAt = endedAt,
+                ringCount = 3,
+            ),
         ).inOrder()
+    }
+
+    // --- "It rang, and you never switched it off" ---
+
+    /**
+     * Order matters more than it looks: CancelNotifications clears this alarm's notices,
+     * so a notice reported before it would be posted and immediately wiped.
+     */
+    @Test
+    fun `the unattended report comes after the notifications are cancelled`() {
+        val config = config(repeatCount = 0)
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+        val (_, effects) = reduce(firing, config, SessionEvent.PlaybackComplete(occurrence))
+
+        val cancelAt = effects.indexOf(SessionEffect.CancelNotifications)
+        val reportAt = effects.indexOfFirst { it is SessionEffect.ReportUnattended }
+        assertThat(cancelAt).isGreaterThan(-1)
+        assertThat(reportAt).isGreaterThan(cancelAt)
+    }
+
+    @Test
+    fun `a single ring that nobody stopped is reported as one ring`() {
+        val config = config(repeatCount = 0)
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+        val endedAt = occurrence.plusSeconds(12)
+        val (_, effects) = reduce(firing, config, SessionEvent.PlaybackComplete(endedAt))
+
+        assertThat(effects.filterIsInstance<SessionEffect.ReportUnattended>().single())
+            .isEqualTo(
+                SessionEffect.ReportUnattended(
+                    firstRingAt = occurrence,
+                    endedAt = endedAt,
+                    ringCount = 1,
+                ),
+            )
+    }
+
+    /** The criterion is "you did not switch it off", not "you never touched the phone". */
+    @Test
+    fun `snoozing by hand and then sleeping through still counts as unattended`() {
+        val config = config(repeatCount = 1)
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+        val (snoozed, _) = reduce(firing, config, SessionEvent.UserSnooze(occurrence))
+        val (refire, _) = reduce(snoozed, config, SessionEvent.Fire(snoozed.nextActionAt))
+        val (_, effects) = reduce(refire, config, SessionEvent.PlaybackComplete(snoozed.nextActionAt))
+
+        assertThat(effects.filterIsInstance<SessionEffect.ReportUnattended>().single().ringCount)
+            .isEqualTo(2)
+    }
+
+    /** Switching it off yourself is the one case that needs no reminder. */
+    @Test
+    fun `a dismissed alarm is never reported as unattended`() {
+        val config = config(repeatCount = 3)
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+
+        val (_, dismissedWhileFiring) = reduce(firing, config, SessionEvent.UserDismiss(occurrence))
+        assertThat(dismissedWhileFiring.filterIsInstance<SessionEffect.ReportUnattended>()).isEmpty()
+
+        val (snoozed, _) = reduce(firing, config, SessionEvent.PlaybackComplete(occurrence))
+        val (_, dismissedWhileSnoozed) = reduce(snoozed, config, SessionEvent.UserDismiss(occurrence))
+        assertThat(dismissedWhileSnoozed.filterIsInstance<SessionEffect.ReportUnattended>()).isEmpty()
+    }
+
+    /** Preemption already reports itself as missed; two notices for one alarm is noise. */
+    @Test
+    fun `a preempted alarm reports missed and not unattended`() {
+        val config = config(repeatCount = 3)
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+        val (_, effects) = reduce(firing, config, SessionEvent.Preempted(occurrence))
+
+        assertThat(effects).contains(SessionEffect.ReportMissed(occurrence))
+        assertThat(effects.filterIsInstance<SessionEffect.ReportUnattended>()).isEmpty()
+    }
+
+    /** An "until dismissed" chain never ends by itself, so there is nothing to report. */
+    @Test
+    fun `infinite snooze never reports unattended`() {
+        val config = config(repeatCount = -1)
+        var state = scheduled()
+        var now = occurrence
+        repeat(5) {
+            val (firing, _) = reduce(state, config, SessionEvent.Fire(now))
+            val (snoozed, effects) = reduce(firing, config, SessionEvent.PlaybackComplete(now))
+            assertThat(effects.filterIsInstance<SessionEffect.ReportUnattended>()).isEmpty()
+            state = snoozed
+            now = snoozed.nextActionAt
+        }
     }
 
     @Test

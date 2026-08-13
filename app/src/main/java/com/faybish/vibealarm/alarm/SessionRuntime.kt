@@ -140,6 +140,9 @@ class SessionRuntime(
                     ReliabilityLogger.FIRED,
                     "alarm=${alarm.id} instance=${entity.id} snoozesUsed=${next.snoozesUsed}",
                 )
+                // Last night's "you never switched it off" notice must not sit next to
+                // tonight's alarm as if it were about this one.
+                notifications.cancelUnattended(alarm.id)
                 sink.showFiring(alarm, entity.id)
             }
 
@@ -164,6 +167,20 @@ class SessionRuntime(
             is SessionEffect.ReportMissed -> {
                 logger.log(ReliabilityLogger.MISSED, "alarm=${alarm.id} at=${effect.occurrence}")
                 notifications.showMissed(alarm, effect.occurrence)
+            }
+
+            is SessionEffect.ReportUnattended -> {
+                logger.log(
+                    ReliabilityLogger.UNATTENDED,
+                    "alarm=${alarm.id} rings=${effect.ringCount} " +
+                        "from=${effect.firstRingAt} to=${effect.endedAt}",
+                )
+                notifications.showUnattended(
+                    alarm = alarm,
+                    firstRingAt = effect.firstRingAt,
+                    endedAt = effect.endedAt,
+                    ringCount = effect.ringCount,
+                )
             }
         }
         return entity

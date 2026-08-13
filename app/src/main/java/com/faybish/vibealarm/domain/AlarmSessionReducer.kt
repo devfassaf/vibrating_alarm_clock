@@ -47,7 +47,17 @@ object AlarmSessionReducer {
         if (state.phase != SessionPhase.FIRING) return state to emptyList()
         val canAutoSnooze =
             config.snoozeRepeatCount == -1 || state.snoozesUsed < config.snoozeRepeatCount
-        return if (canAutoSnooze) snooze(state, config, now) else finish(state, EndReason.AUTO_DISMISSED)
+        if (canAutoSnooze) return snooze(state, config, now)
+
+        // The chain is over and the user never dismissed it — whether they slept through
+        // every ring or snoozed a few by hand, they did not switch it off. Report it after
+        // CancelNotifications, which would otherwise wipe the notice it posts.
+        val (next, effects) = finish(state, EndReason.AUTO_DISMISSED)
+        return next to effects + SessionEffect.ReportUnattended(
+            firstRingAt = state.occurrence,
+            endedAt = now,
+            ringCount = state.snoozesUsed + 1,
+        )
     }
 
     private fun userSnooze(

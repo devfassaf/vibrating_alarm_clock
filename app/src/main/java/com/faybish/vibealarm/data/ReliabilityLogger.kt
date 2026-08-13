@@ -31,6 +31,7 @@ class ReliabilityLogger(
         const val FIRED = "FIRED"
         const val SNOOZED = "SNOOZED"
         const val AUTO_DISMISSED = "AUTO_DISMISSED"
+        const val UNATTENDED = "UNATTENDED"
         const val USER_DISMISSED = "USER_DISMISSED"
         const val MISSED = "MISSED"
         const val PREEMPTED = "PREEMPTED"

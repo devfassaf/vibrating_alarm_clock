@@ -168,13 +168,14 @@
     <string name="channel_silent_name">השכמה שקטה (מסך כבוי)</string>
     <string name="channel_silent_description">בשימוש השכמות רטט בלבד, כדי שדבר לא ידליק את המסך.</string>
     <string name="channel_status_name">מצב ההשכמה</string>
-    <string name="channel_status_description">הודעות על נודניק ועל השכמה שהוחמצה.</string>
+    <string name="channel_status_description">הודעות על נודניק, על השכמה שהוחמצה ועל השכמה שפעלה ולא כובתה.</string>
 
     <!-- Notifications -->
     <string name="notification_firing_text">השכמה</string>
     <string name="notification_snoozed_until">נודניק עד %1$s</string>
     <string name="notification_missed_title">השכמה הוחמצה</string>
     <string name="notification_missed_text">%1$s הייתה מיועדת ל-%2$s</string>
+    <string name="notification_unattended_title">ההשכמה פעלה ולא כובתה</string>
 
     <!-- Vibration presets -->
     <string name="pattern_preset_gentle">עדינה</string>
@@ -217,6 +218,11 @@
         <item quantity="one">בעיה אחת עלולה למנוע השכמה</item>
         <item quantity="two">שתי בעיות עלולות למנוע השכמה</item>
         <item quantity="other">%1$d בעיות עלולות למנוע השכמה</item>
+    </plurals>
+    <plurals name="notification_unattended_text">
+        <item quantity="one">%1$s · פעלה פעם אחת ב-%2$s</item>
+        <item quantity="two">%1$s · פעלה פעמיים, בין %2$s ל-%3$s</item>
+        <item quantity="other">%1$s · פעלה %4$d פעמים, בין %2$s ל-%3$s</item>
     </plurals>
     <plurals name="notification_snoozed_until_remaining">
         <item quantity="one">נודניק עד %1$s · נשאר אחד</item>
