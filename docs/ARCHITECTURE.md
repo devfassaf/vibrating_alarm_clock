@@ -127,8 +127,12 @@ every way out of the card (collapse, opening another, the back gesture) goes thr
 unsaved-changes question. The switch and delete are the exceptions — they act immediately,
 because both mean one thing at the moment they are tapped.
 
-Saving answers with a snackbar naming the day, the time and the time left, built by
-`TriggerDescriptor` + `ui/format`.
+Saving switches the alarm on, closes the card, returns the list to the top, and answers
+with a snackbar naming the day, the time and the time left (`TriggerDescriptor` +
+`ui/format`). Pressing save means wanting the alarm, so an edit cannot leave it off.
+
+`TimePickerDialog` offers both Material input modes — clock face and keypad — behind one
+icon, and remembers which one was last used in `SettingsStore.timeInputByKeyboard`.
 
 `AlarmActivity` is the full-screen ringing UI, shown over the lock screen, and only for
 alarms configured to turn the screen on. Its two actions must be **dragged**, not tapped
@@ -136,7 +140,9 @@ alarms configured to turn the screen on. Its two actions must be **dragged**, no
 meant. Volume keys snooze while it has focus — with the screen off no app can see them.
 
 `docs/index.html` is the landing page served by GitHub Pages (Settings → Pages → `main`,
-`/docs`).
+`/docs`). The app's own "home page" button opens the **project page** instead
+(`UpdateAssets.siteUrl()`), because the Pages address 404s until the repository owner turns
+Pages on and a home button must not 404.
 
 ## Data
 

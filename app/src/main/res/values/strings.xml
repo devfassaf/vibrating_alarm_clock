@@ -34,6 +34,8 @@
     <string name="action_move_down">Move down</string>
     <string name="action_reset_to_default">Use default time</string>
     <string name="action_open_settings">Open settings</string>
+    <string name="action_use_keyboard">Type the time</string>
+    <string name="action_use_clock">Pick on the clock</string>
     <string name="action_snooze">Snooze</string>
     <string name="action_dismiss">Dismiss</string>
     <string name="action_drag_to_snooze">Drag to snooze</string>

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -80,6 +81,7 @@ fun AlarmListScreen(
     // What to do once the unsaved-changes question has been answered.
     var pendingLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
 
+    val listState = rememberLazyListState()
     val snackbar = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -93,8 +95,15 @@ fun AlarmListScreen(
         }
     }
 
-    fun saveOpenCard(keepEditing: Boolean) {
-        viewModel.commitDraft(keepEditing) { saved, trigger -> announce(saved, trigger) }
+    /**
+     * Saving finishes the job: the card closes, the list comes back to the top, and the
+     * bubble says when the alarm will ring. Leaving an expanded form open after a save
+     * reads as "something is still pending" when nothing is.
+     */
+    fun saveOpenCard() {
+        expandedId = null
+        viewModel.commitDraft { saved, trigger -> announce(saved, trigger) }
+        scope.launch { listState.animateScrollToItem(0) }
     }
 
     /** Leaving the open card is the only moment an edit can be lost, so it asks first. */
@@ -151,6 +160,7 @@ fun AlarmListScreen(
         },
     ) { padding ->
         LazyColumn(
+            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(
                 top = padding.calculateTopPadding(),
@@ -195,7 +205,7 @@ fun AlarmListScreen(
                         },
                         onAlarmChange = viewModel::updateDraft,
                         onScheduleChange = viewModel::updateDraftSchedule,
-                        onSave = { saveOpenCard(keepEditing = true) },
+                        onSave = { saveOpenCard() },
                         onDiscard = viewModel::resetDraft,
                         onPickPattern = { onPickPatternFor(alarm.id) },
                         onPreviewVibration = { viewModel.previewVibration(shown) },
@@ -215,7 +225,7 @@ fun AlarmListScreen(
         UnsavedChangesDialog(
             onSave = {
                 pendingLeave = null
-                saveOpenCard(keepEditing = false)
+                saveOpenCard()
                 leave()
             },
             onDiscard = {

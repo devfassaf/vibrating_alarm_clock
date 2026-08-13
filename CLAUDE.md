@@ -60,6 +60,12 @@ The one thing added *after* the fact is allowed to be informational: the
    `fallbackToDestructiveMigration`: those rows are the alarms someone is relying on
    tomorrow morning.
 
+10. **Saving a card enables the alarm** and closes the editor. An edit that left the alarm
+    off would be a silent morning wearing the appearance of a saved alarm.
+11. **User-facing URLs must resolve today.** `UpdateAssets.siteUrl()` is what the app opens
+    and points at the project page; `pagesUrl()` is the docs/ landing page, which only
+    exists once the repository owner enables GitHub Pages.
+
 ## Conventions
 
 - **Strings**: `values/` (English) and `values-iw/` (Hebrew) must stay at exact parity, with
