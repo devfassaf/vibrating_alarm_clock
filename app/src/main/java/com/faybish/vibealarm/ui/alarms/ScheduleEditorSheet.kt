@@ -2,6 +2,8 @@ package com.faybish.vibealarm.ui.alarms
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -12,6 +14,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -42,7 +45,7 @@ import com.faybish.vibealarm.R
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
 import com.faybish.vibealarm.ui.components.LabeledRow
-import com.faybish.vibealarm.ui.format.dayLabel
+import com.faybish.vibealarm.ui.format.dayName
 import com.faybish.vibealarm.ui.format.formatDate
 import com.faybish.vibealarm.ui.format.formatTime
 import com.faybish.vibealarm.ui.format.weekStart
@@ -164,7 +167,17 @@ fun ScheduleEditorSheet(
 
                     ScheduleKind.WEEKLY -> {
                         HorizontalDivider(Modifier.padding(vertical = 8.dp))
-                        DayChips(
+                        Text(
+                            text = stringResource(R.string.field_week_days),
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        Text(
+                            text = stringResource(R.string.week_days_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                        WeekDaysPicker(
                             selected = days,
                             onToggle = { day ->
                                 days = if (day in days) days - day else days + day
@@ -185,7 +198,7 @@ fun ScheduleEditorSheet(
                             val effective = overrides[day] ?: defaultTime
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 LabeledRow(
-                                    title = dayLabel(day, short = false),
+                                    title = dayName(day),
                                     value = formatTime(effective),
                                     onClick = { editingDayTime = day },
                                     modifier = Modifier.weight(1f),
@@ -289,17 +302,34 @@ fun ScheduleEditorSheet(
     }
 }
 
+/**
+ * Seven independent days, each with its own name and its own chip.
+ *
+ * They wrap instead of sharing one row: seven chips never fit a dialog's width, and the
+ * previous single row silently squeezed the last day — Saturday — down to nothing, so the
+ * one day this app exists for could not be selected at all.
+ */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun DayChips(selected: Set<DayOfWeek>, onToggle: (DayOfWeek) -> Unit) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+private fun WeekDaysPicker(selected: Set<DayOfWeek>, onToggle: (DayOfWeek) -> Unit) {
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(top = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         ScheduleSummarizer.weekOrder(weekStart()).forEach { day ->
+            val isSelected = day in selected
             FilterChip(
-                selected = day in selected,
+                selected = isSelected,
                 onClick = { onToggle(day) },
-                label = { Text(dayLabel(day).take(2)) },
+                label = { Text(dayName(day)) },
+                leadingIcon = if (isSelected) {
+                    { Icon(Icons.Filled.Check, contentDescription = null) }
+                } else {
+                    null
+                },
             )
         }
     }

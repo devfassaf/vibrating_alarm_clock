@@ -36,13 +36,16 @@
     <string name="action_open_settings">Open settings</string>
     <string name="action_snooze">Snooze</string>
     <string name="action_dismiss">Dismiss</string>
+    <string name="action_discard">Discard changes</string>
+    <string name="action_keep_editing">Keep editing</string>
 
     <!-- Alarm list -->
     <string name="empty_alarms_title">No alarms yet</string>
     <string name="empty_alarms_hint">Tap + to add one. Choose vibration-only to wake up without waking anyone else.</string>
-    <string name="time_until_days">in %1$d d %2$d h</string>
-    <string name="time_until_hours">in %1$d h %2$d min</string>
-    <string name="time_until_minutes">in %1$d min</string>
+    <string name="time_until_one">in %1$s</string>
+    <string name="time_until_two_parts">in %1$s %2$s</string>
+    <string name="time_until_two_parts_word">in %1$s %2$s</string>
+    <string name="time_until_now">in less than a minute</string>
 
     <!-- Alarm fields -->
     <string name="field_schedule">Schedule</string>
@@ -82,12 +85,33 @@
     <string name="schedule_once">Once</string>
     <string name="schedule_once_hint">Rings at the next occurrence of this time, then turns itself off.</string>
     <string name="schedule_every_day">Every day</string>
-    <string name="schedule_weekdays">Mon–Fri</string>
-    <string name="schedule_weekend">Weekend</string>
     <string name="schedule_no_days">No days selected</string>
     <string name="schedule_no_dates">No dates yet</string>
     <string name="per_day_times_title">Time per day</string>
     <string name="per_day_times_hint">Tap a day to give it its own time, e.g. Monday 07:00 and Tuesday 08:00 in the same alarm.</string>
+
+    <!-- Week days: each day stands on its own, by name -->
+    <string name="field_week_days">Days of the week</string>
+    <string name="week_days_hint">Each day is picked on its own, Saturday included. The alarm repeats on every selected day.</string>
+    <string name="day_sunday">Sunday</string>
+    <string name="day_monday">Monday</string>
+    <string name="day_tuesday">Tuesday</string>
+    <string name="day_wednesday">Wednesday</string>
+    <string name="day_thursday">Thursday</string>
+    <string name="day_friday">Friday</string>
+    <string name="day_saturday">Saturday</string>
+
+    <!-- Saving an alarm -->
+    <string name="unsaved_changes">Unsaved changes</string>
+    <string name="unsaved_changes_hint">The alarm still uses its previous settings. Your changes take effect only when you press Save.</string>
+    <string name="unsaved_changes_message">This alarm has changes you have not saved. Discard them and the alarm stays exactly as it was.</string>
+    <string name="announce_today">Alarm set for today at %1$s</string>
+    <string name="announce_tomorrow">Alarm set for tomorrow at %1$s</string>
+    <string name="announce_this_week">Alarm set for %1$s at %2$s</string>
+    <string name="announce_later">Alarm set for %1$s at %2$s</string>
+    <string name="announce_with_remaining">%1$s · %2$s</string>
+    <string name="announce_disabled">This alarm is off — it will not ring until you turn it on.</string>
+    <string name="announce_no_trigger">This alarm has no upcoming time — pick days or dates.</string>
 
     <!-- Patterns -->
     <string name="pattern_in_use">This pattern is used by an alarm, so it cannot be deleted.</string>
@@ -157,6 +181,18 @@
     <string name="pattern_preset_waves">Waves</string>
     <string name="pattern_preset_escalating">Escalating</string>
 
+    <plurals name="duration_days_part">
+        <item quantity="one">1 day</item>
+        <item quantity="other">%1$d days</item>
+    </plurals>
+    <plurals name="duration_hours_part">
+        <item quantity="one">1 hour</item>
+        <item quantity="other">%1$d hours</item>
+    </plurals>
+    <plurals name="duration_minutes_part">
+        <item quantity="one">1 minute</item>
+        <item quantity="other">%1$d minutes</item>
+    </plurals>
     <plurals name="schedule_dates_from">
         <item quantity="one">From %1$s · %2$d date</item>
         <item quantity="other">From %1$s · %2$d dates</item>

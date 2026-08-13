@@ -36,13 +36,18 @@
     <string name="action_open_settings">פתיחת ההגדרות</string>
     <string name="action_snooze">נודניק</string>
     <string name="action_dismiss">כיבוי</string>
+    <string name="action_discard">השלכת השינויים</string>
+    <string name="action_keep_editing">חזרה לעריכה</string>
 
     <!-- Alarm list -->
     <string name="empty_alarms_title">אין עדיין השכמות</string>
     <string name="empty_alarms_hint">הקישו + כדי להוסיף. בחירת רטט בלבד מאפשרת להתעורר בלי להעיר אף אחד אחר.</string>
-    <string name="time_until_days">בעוד %1$d ימים ו-%2$d שעות</string>
-    <string name="time_until_hours">בעוד %1$d שעות ו-%2$d דקות</string>
-    <string name="time_until_minutes">בעוד %1$d דקות</string>
+    <!-- Assembled from the parts below so "בעוד יום" never comes out as "בעוד 1 ימים" -->
+    <string name="time_until_one">בעוד %1$s</string>
+    <string name="time_until_two_parts">בעוד %1$s ו-%2$s</string>
+    <!-- The maqaf belongs before a number ("ו-23 שעות") but not before a word ("ושעה") -->
+    <string name="time_until_two_parts_word">בעוד %1$s ו%2$s</string>
+    <string name="time_until_now">בעוד פחות מדקה</string>
 
     <!-- Alarm fields -->
     <string name="field_schedule">תזמון</string>
@@ -82,12 +87,33 @@
     <string name="schedule_once">פעם אחת</string>
     <string name="schedule_once_hint">מצלצל בפעם הבאה שהשעה הזו מגיעה, ואז נכבה מעצמו.</string>
     <string name="schedule_every_day">כל יום</string>
-    <string name="schedule_weekdays">שני–שישי</string>
-    <string name="schedule_weekend">סוף שבוע</string>
     <string name="schedule_no_days">לא נבחרו ימים</string>
     <string name="schedule_no_dates">אין עדיין תאריכים</string>
     <string name="per_day_times_title">שעה לכל יום</string>
     <string name="per_day_times_hint">הקישו על יום כדי לתת לו שעה משלו, למשל שני ב-7:00 ושלישי ב-8:00 באותה השכמה.</string>
+
+    <!-- Week days: each day stands on its own, by name -->
+    <string name="field_week_days">ימי השבוע</string>
+    <string name="week_days_hint">כל יום נבחר בנפרד, כולל שבת. ההשכמה תחזור בכל יום מסומן.</string>
+    <string name="day_sunday">ראשון</string>
+    <string name="day_monday">שני</string>
+    <string name="day_tuesday">שלישי</string>
+    <string name="day_wednesday">רביעי</string>
+    <string name="day_thursday">חמישי</string>
+    <string name="day_friday">שישי</string>
+    <string name="day_saturday">שבת</string>
+
+    <!-- Saving an alarm -->
+    <string name="unsaved_changes">שינויים שלא נשמרו</string>
+    <string name="unsaved_changes_hint">ההשכמה עדיין תופעל לפי ההגדרות הקודמות. השינויים ייכנסו לתוקף רק בלחיצה על שמירה.</string>
+    <string name="unsaved_changes_message">יש שינויים בהשכמה הזו שלא נשמרו. אם תשליכו אותם, ההשכמה תישאר כפי שהייתה.</string>
+    <string name="announce_today">ההשכמה תופעל היום ב-%1$s</string>
+    <string name="announce_tomorrow">ההשכמה תופעל מחר ב-%1$s</string>
+    <string name="announce_this_week">ההשכמה תופעל ביום %1$s ב-%2$s</string>
+    <string name="announce_later">ההשכמה תופעל ב-%1$s בשעה %2$s</string>
+    <string name="announce_with_remaining">%1$s · %2$s</string>
+    <string name="announce_disabled">ההשכמה כבויה — היא לא תופעל עד שתדליקו אותה.</string>
+    <string name="announce_no_trigger">אין מועד עתידי להשכמה הזו — בחרו ימים או תאריכים.</string>
 
     <!-- Patterns -->
     <string name="pattern_in_use">התבנית בשימוש של השכמה קיימת, ולכן אי אפשר למחוק אותה.</string>
@@ -157,6 +183,21 @@
     <string name="pattern_preset_waves">גלים</string>
     <string name="pattern_preset_escalating">מתגברת</string>
 
+    <plurals name="duration_days_part">
+        <item quantity="one">יום</item>
+        <item quantity="two">יומיים</item>
+        <item quantity="other">%1$d ימים</item>
+    </plurals>
+    <plurals name="duration_hours_part">
+        <item quantity="one">שעה</item>
+        <item quantity="two">שעתיים</item>
+        <item quantity="other">%1$d שעות</item>
+    </plurals>
+    <plurals name="duration_minutes_part">
+        <item quantity="one">דקה</item>
+        <item quantity="two">שתי דקות</item>
+        <item quantity="other">%1$d דקות</item>
+    </plurals>
     <plurals name="schedule_dates_from">
         <item quantity="one">מ-%1$s · תאריך אחד</item>
         <item quantity="two">מ-%1$s · שני תאריכים</item>

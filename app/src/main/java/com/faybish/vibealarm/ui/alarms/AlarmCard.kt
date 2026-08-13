@@ -19,6 +19,7 @@ import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Snooze
 import androidx.compose.material.icons.filled.Vibration
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +31,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -53,22 +55,32 @@ import com.faybish.vibealarm.ui.components.LabeledRow
 import com.faybish.vibealarm.ui.components.OptionChips
 import com.faybish.vibealarm.ui.components.PercentSlider
 import com.faybish.vibealarm.ui.format.currentLocale
+import com.faybish.vibealarm.ui.format.dayName
 import com.faybish.vibealarm.ui.format.formatTime
 import com.faybish.vibealarm.ui.format.scheduleSummaryText
 import com.faybish.vibealarm.ui.format.timeUntilText
 import com.faybish.vibealarm.ui.format.weekStart
 import java.time.Instant
 import java.time.LocalTime
-import java.time.format.TextStyle
 
 /**
  * One alarm, collapsed to time + schedule + switch, expanding in place into the
  * full editor. Mirrors how Google Clock behaves so the app feels familiar.
+ *
+ * While it is open the card edits [draft] and the stored alarm is left alone: what time
+ * you wake up tomorrow is not something to change by brushing a slider, so it takes a
+ * save. The switch is the exception — it means one thing and it means it now.
+ *
+ * @param stored the alarm as saved; shown when the card is collapsed.
+ * @param draft the edited copy, non-null while this card is the open one.
+ * @param dirty whether the draft holds changes the alarm has not been given yet.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlarmCard(
-    alarm: AlarmEntity,
+    stored: AlarmEntity,
+    draft: AlarmEntity?,
+    dirty: Boolean,
     schedule: Schedule,
     nextTrigger: Instant?,
     patternName: String?,
@@ -77,6 +89,8 @@ fun AlarmCard(
     onEnabledChange: (Boolean) -> Unit,
     onAlarmChange: (AlarmEntity) -> Unit,
     onScheduleChange: (Schedule) -> Unit,
+    onSave: () -> Unit,
+    onDiscard: () -> Unit,
     onPickPattern: () -> Unit,
     onPreviewVibration: () -> Unit,
     onPreviewSound: () -> Unit,
@@ -84,6 +98,8 @@ fun AlarmCard(
 ) {
     var showTimePicker by remember { mutableStateOf(false) }
     var showScheduleEditor by remember { mutableStateOf(false) }
+
+    val alarm = draft ?: stored
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -112,7 +128,16 @@ fun AlarmCard(
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
-                    if (alarm.enabled && nextTrigger != null) {
+                    // While there are unsaved edits, "rings in 6 hours" would describe
+                    // neither the alarm on screen nor the one that is armed, so it says
+                    // what is actually true instead.
+                    if (dirty) {
+                        Text(
+                            text = stringResource(R.string.unsaved_changes),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.error,
+                        )
+                    } else if (alarm.enabled && nextTrigger != null) {
                         Text(
                             text = timeUntilText(nextTrigger),
                             style = MaterialTheme.typography.labelMedium,
@@ -180,9 +205,20 @@ fun AlarmCard(
 
                     ScreenSettings(alarm, onAlarmChange)
 
+                    if (dirty) {
+                        Text(
+                            text = stringResource(R.string.unsaved_changes_hint),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
                         IconButton(onClick = onDelete) {
                             Icon(
@@ -190,6 +226,17 @@ fun AlarmCard(
                                 contentDescription = stringResource(R.string.action_delete),
                             )
                         }
+                        Spacer(Modifier.weight(1f))
+                        // Both stay visible when there is nothing to save: buttons that
+                        // come and go are harder to find than buttons that are greyed out.
+                        TextButton(onClick = onDiscard, enabled = dirty) {
+                            Text(stringResource(R.string.action_discard))
+                        }
+                        Button(
+                            onClick = onSave,
+                            enabled = dirty,
+                            modifier = Modifier.padding(start = 8.dp),
+                        ) { Text(stringResource(R.string.action_save)) }
                     }
                 }
             }
@@ -259,7 +306,7 @@ private fun PerDayTimes(schedule: Schedule.Weekly) {
     val locale = currentLocale()
     Text(
         text = overridden.joinToString(" · ") { day ->
-            val name = day.getDisplayName(TextStyle.SHORT, locale)
+            val name = dayName(context, day)
             "$name ${formatTime(context, schedule.overrides.getValue(day), locale)}"
         },
         style = MaterialTheme.typography.labelMedium,

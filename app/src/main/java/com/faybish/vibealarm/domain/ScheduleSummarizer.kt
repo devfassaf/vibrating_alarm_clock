@@ -11,8 +11,12 @@ import java.time.LocalTime
 sealed interface ScheduleSummary {
     data object Once : ScheduleSummary
     data object EveryDay : ScheduleSummary
-    data object Weekdays : ScheduleSummary
-    data object Weekend : ScheduleSummary
+
+    /**
+     * Every selected day, named. There is deliberately no "weekend" or "weekdays"
+     * shorthand: which days those are depends on where you live — an app whose whole
+     * point is Saturday morning must not label Saturday by an American convention.
+     */
     data class Days(val days: List<DayOfWeek>) : ScheduleSummary
     data class DateCount(val count: Int, val first: LocalDate?) : ScheduleSummary
     data object Never : ScheduleSummary
@@ -31,8 +35,6 @@ object ScheduleSummarizer {
             is Schedule.Weekly -> when {
                 schedule.days.isEmpty() -> ScheduleSummary.Never
                 schedule.days.size == 7 -> ScheduleSummary.EveryDay
-                schedule.days == WEEKDAYS -> ScheduleSummary.Weekdays
-                schedule.days == WEEKEND -> ScheduleSummary.Weekend
                 else -> ScheduleSummary.Days(orderedDays(schedule.days, weekStart))
             }
 
@@ -72,13 +74,4 @@ object ScheduleSummarizer {
     fun overriddenDays(schedule: Schedule.Weekly, weekStart: DayOfWeek): List<DayOfWeek> =
         orderedDays(schedule.days, weekStart)
             .filter { schedule.overrides[it] != null && schedule.overrides[it] != schedule.defaultTime }
-
-    private val WEEKDAYS = setOf(
-        DayOfWeek.MONDAY,
-        DayOfWeek.TUESDAY,
-        DayOfWeek.WEDNESDAY,
-        DayOfWeek.THURSDAY,
-        DayOfWeek.FRIDAY,
-    )
-    private val WEEKEND = setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY)
 }

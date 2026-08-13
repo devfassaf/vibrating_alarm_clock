@@ -20,8 +20,12 @@ class ScheduleSummarizerTest {
         assertThat(ScheduleSummarizer.summarize(schedule)).isEqualTo(ScheduleSummary.EveryDay)
     }
 
+    /**
+     * No group shorthands: "weekend" is Saturday and Sunday in one country and Friday and
+     * Saturday in another, and this app is about Saturday. Named days cannot be wrong.
+     */
     @Test
-    fun `monday to friday summarizes as weekdays`() {
+    fun `monday to friday is listed day by day, not called weekdays`() {
         val schedule = Schedule.Weekly(
             setOf(
                 DayOfWeek.MONDAY,
@@ -32,7 +36,36 @@ class ScheduleSummarizerTest {
             ),
             LocalTime.of(7, 0),
         )
-        assertThat(ScheduleSummarizer.summarize(schedule)).isEqualTo(ScheduleSummary.Weekdays)
+        assertThat(ScheduleSummarizer.summarize(schedule, DayOfWeek.SUNDAY)).isEqualTo(
+            ScheduleSummary.Days(
+                listOf(
+                    DayOfWeek.MONDAY,
+                    DayOfWeek.TUESDAY,
+                    DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY,
+                    DayOfWeek.FRIDAY,
+                ),
+            ),
+        )
+    }
+
+    @Test
+    fun `saturday and sunday are listed day by day, not called a weekend`() {
+        val schedule = Schedule.Weekly(
+            setOf(DayOfWeek.SATURDAY, DayOfWeek.SUNDAY),
+            LocalTime.of(7, 0),
+        )
+        assertThat(ScheduleSummarizer.summarize(schedule, DayOfWeek.SUNDAY)).isEqualTo(
+            ScheduleSummary.Days(listOf(DayOfWeek.SUNDAY, DayOfWeek.SATURDAY)),
+        )
+    }
+
+    /** The whole point of the app: Saturday alone, and it stays Saturday alone. */
+    @Test
+    fun `saturday on its own summarizes as saturday`() {
+        val schedule = Schedule.Weekly(setOf(DayOfWeek.SATURDAY), LocalTime.of(7, 30))
+        assertThat(ScheduleSummarizer.summarize(schedule, DayOfWeek.SUNDAY))
+            .isEqualTo(ScheduleSummary.Days(listOf(DayOfWeek.SATURDAY)))
     }
 
     @Test
