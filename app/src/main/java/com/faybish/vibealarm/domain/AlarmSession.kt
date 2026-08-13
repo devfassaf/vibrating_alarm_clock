@@ -66,4 +66,21 @@ sealed interface SessionEffect {
     /** Chain over — compute and arm the alarm's next occurrence (or disable it). */
     data object ScheduleNextOccurrence : SessionEffect
     data class ReportMissed(val occurrence: Instant) : SessionEffect
+
+    /**
+     * The alarm ran its whole chain and nobody switched it off.
+     *
+     * The opposite of [ReportMissed], which means the alarm never rang at all. Ending by
+     * itself is the intended Shabbat behaviour, not a fault — but every trace of it used
+     * to be cancelled along with the notifications, so the morning after looked exactly
+     * like a morning the alarm had failed. This leaves the evidence behind: it rang, and
+     * you were not the one who stopped it.
+     *
+     * @param ringCount how many times it played, first ring included.
+     */
+    data class ReportUnattended(
+        val firstRingAt: Instant,
+        val endedAt: Instant,
+        val ringCount: Int,
+    ) : SessionEffect
 }

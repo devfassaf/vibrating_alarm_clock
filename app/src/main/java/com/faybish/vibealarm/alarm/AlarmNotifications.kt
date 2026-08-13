@@ -7,10 +7,11 @@ import android.content.Context
 import android.os.Build
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.ui.format.formatDate
+import com.faybish.vibealarm.ui.format.formatTime
 import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
+import java.util.Locale
 
 /**
  * Notification channels and builders for the alarm lifecycle.
@@ -124,7 +125,7 @@ class AlarmNotifications(private val context: Context) {
     }
 
     fun showSnoozed(alarm: AlarmEntity, instanceId: Long, until: Instant, remaining: Int?) {
-        val time = timeFormatter.format(until.atZone(ZoneId.systemDefault()))
+        val time = until.asClockTime()
         val text = if (remaining == null) {
             context.getString(R.string.notification_snoozed_until, time)
         } else {
@@ -154,7 +155,9 @@ class AlarmNotifications(private val context: Context) {
     }
 
     fun showMissed(alarm: AlarmEntity, occurrence: Instant) {
-        val time = dateTimeFormatter.format(occurrence.atZone(ZoneId.systemDefault()))
+        val zoned = occurrence.atZone(ZoneId.systemDefault())
+        // Dated, because a missed alarm can be from a day the phone spent switched off.
+        val time = "${formatDate(zoned.toLocalDate(), appLocale())} ${occurrence.asClockTime()}"
         val notification = Notification.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(R.drawable.ic_alarm_notification)
             .setContentTitle(context.getString(R.string.notification_missed_title))
@@ -165,20 +168,78 @@ class AlarmNotifications(private val context: Context) {
         manager.notify(missedId(alarm.id), notification)
     }
 
-    /** Cancels only this alarm's notifications; another alarm may be ringing. */
+    /**
+     * "It rang, and you were not the one who stopped it."
+     *
+     * Posted when a chain ends on its own, which is the alarm working as designed — so
+     * this is a record, not an alert: the status channel carries no sound and no
+     * vibration, because it lands at the end of the ring chain, when whoever else is in
+     * the room is still asleep.
+     *
+     * @param ringCount rings including the first, so "rang 3 times" also answers whether
+     *   the pattern was simply too gentle to wake up to.
+     */
+    fun showUnattended(alarm: AlarmEntity, firstRingAt: Instant, endedAt: Instant, ringCount: Int) {
+        val text = context.resources.getQuantityString(
+            R.plurals.notification_unattended_text,
+            ringCount,
+            alarm.displayLabel(),
+            firstRingAt.asClockTime(),
+            endedAt.asClockTime(),
+            ringCount,
+        )
+        val notification = Notification.Builder(context, CHANNEL_STATUS)
+            .setSmallIcon(R.drawable.ic_alarm_notification)
+            .setContentTitle(context.getString(R.string.notification_unattended_title))
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
+            .setWhen(endedAt.toEpochMilli())
+            .setShowWhen(true)
+            // Stays until it is dealt with: on a Shabbat morning it cannot be swiped away,
+            // and it is the only evidence that the alarm did its job.
+            .setAutoCancel(true)
+            .setContentIntent(AlarmIntents.appPendingIntent(context, alarm.id))
+            .build()
+        manager.notify(unattendedId(alarm.id), notification)
+    }
+
+    /**
+     * Cancels only this alarm's notifications; another alarm may be ringing.
+     *
+     * Includes the unattended notice: this runs when a chain ends, and the one path that
+     * ends with a notice to post — auto-dismissal — posts it afterwards. Reaching here any
+     * other way (the user dismissed the alarm, another alarm preempted it) means someone
+     * is awake and holding the phone, so last night's notice has served its purpose.
+     */
     fun cancelForAlarm(alarmId: Long) {
         manager.cancel(firingId(alarmId))
         manager.cancel(snoozedId(alarmId))
+        manager.cancel(unattendedId(alarmId))
     }
 
     fun cancelSnoozed(alarmId: Long) = manager.cancel(snoozedId(alarmId))
 
+    /** Called when the alarm starts ringing again, so yesterday's notice cannot linger. */
+    fun cancelUnattended(alarmId: Long) = manager.cancel(unattendedId(alarmId))
+
     private fun AlarmEntity.displayLabel(): String =
         label.ifBlank { context.getString(R.string.default_alarm_label) }
+
+    private fun appLocale(): Locale = context.resources.configuration.locales[0]
+
+    /**
+     * The same clock the rest of the app shows: the device's 12/24-hour setting, in the
+     * app's language. A notification reading "7:30 AM" beside a screen reading "7:30"
+     * sends the user looking for which of the two is wrong.
+     */
+    private fun Instant.asClockTime(): String =
+        formatTime(context, atZone(ZoneId.systemDefault()).toLocalTime(), appLocale())
 
     private fun snoozedId(alarmId: Long) = SNOOZED_ID_BASE + alarmId.toInt()
 
     private fun missedId(alarmId: Long) = MISSED_ID_BASE + alarmId.toInt()
+
+    private fun unattendedId(alarmId: Long) = UNATTENDED_ID_BASE + alarmId.toInt()
 
     companion object {
         const val CHANNEL_ALERTING = "alarm_alerting"
@@ -188,14 +249,10 @@ class AlarmNotifications(private val context: Context) {
         private const val FIRING_ID_BASE = 100_000
         private const val SNOOZED_ID_BASE = 200_000
         private const val MISSED_ID_BASE = 300_000
+        private const val UNATTENDED_ID_BASE = 400_000
 
         /** Per-alarm id: the foreground notification must not be a shared slot. */
         fun firingId(alarmId: Long) = FIRING_ID_BASE + alarmId.toInt()
-
-        private val timeFormatter: DateTimeFormatter =
-            DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT)
-        private val dateTimeFormatter: DateTimeFormatter =
-            DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT)
     }
 }
 
