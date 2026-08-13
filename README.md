@@ -156,14 +156,14 @@ keystore** — אנדרואיד מסרבת להחליף חתימה, כך שהח�
 
 ### דף הנחיתה
 
-`docs/index.html`. כדי שיהיה חי: Settings → Pages → Source: `main`, folder `/docs`,
-והכתובת תהיה `https://devfassaf.github.io/vibrating_alarm_clock/`.
+`docs/index.html`, מוגש ב-GitHub Pages מ-`main` ומתיקיית `/docs` —
+**[devfassaf.github.io/vibrating_alarm_clock](https://devfassaf.github.io/vibrating_alarm_clock/)**.
+זו הכתובת שכפתור "אתר הבית" באפליקציה פותח (`UpdateAssets.siteUrl()`) וגם הקישור הראשון
+בהודעת השיתוף.
 
-**כפתור "אתר הבית" באפליקציה לא מצביע לשם.** הוא פותח את דף הפרויקט ב-GitHub, שמציג את
-ה-README הזה — מה האפליקציה עושה, איך מתקינים, וכפתור ההורדה. הסיבה פשוטה: כל עוד Pages
-לא דלוק הכתובת של הדף מחזירה 404, וזה הדבר האחד שכפתור "אתר הבית" לא יכול לעשות. דף
-הפרויקט תמיד קיים, וה-README מקשר הלאה לדף הנחיתה למי שרוצה את הגרסה המעוצבת.
-`UpdateAssets.siteUrl()` הוא מה שהאפליקציה פותחת, `UpdateAssets.pagesUrl()` הוא דף הנחיתה.
+ההגדרה הזו היא תנאי ולא פרט: כל עוד Pages כבוי הכתובת מחזירה 404, וכפתור "אתר הבית" לא
+יכול להחזיר 404. אם היא תכובה פעם, `UpdateAssets.projectUrl()` (דף הפרויקט, שתמיד קיים)
+הוא מה שהכפתור צריך לפתוח במקום.
 
 ## אחרי ההתקנה
 

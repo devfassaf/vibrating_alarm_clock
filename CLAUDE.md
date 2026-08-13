@@ -62,9 +62,11 @@ The one thing added *after* the fact is allowed to be informational: the
 
 10. **Saving a card enables the alarm** and closes the editor. An edit that left the alarm
     off would be a silent morning wearing the appearance of a saved alarm.
-11. **User-facing URLs must resolve today.** `UpdateAssets.siteUrl()` is what the app opens
-    and points at the project page; `pagesUrl()` is the docs/ landing page, which only
-    exists once the repository owner enables GitHub Pages.
+11. **User-facing URLs must resolve today.** `UpdateAssets.siteUrl()` is what the app's
+    home button opens: the GitHub Pages landing page from `main` + `/docs`, which is
+    enabled. Pages being on is a precondition of that URL — if it is ever switched off,
+    point the button at `projectUrl()` (the repository, which always renders the README)
+    rather than shipping a button that 404s.
 
 ## Conventions
 

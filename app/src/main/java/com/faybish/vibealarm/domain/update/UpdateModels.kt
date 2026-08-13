@@ -25,24 +25,21 @@ object UpdateAssets {
     fun releasesPageUrl(): String = "https://github.com/$REPO/releases"
 
     /**
-     * Where the app sends someone who wants to know what this is: the project page, which
-     * renders the README — what the app does, how to install it, and the download button.
+     * Where the app sends someone who wants to know what this is: the landing page in
+     * `docs/`, served by GitHub Pages from `main` (Settings → Pages → main, /docs).
      *
-     * Deliberately **not** [pagesUrl]: `docs/index.html` is only served once the
-     * repository owner switches GitHub Pages on, and until then that address answers 404 —
-     * which is what a "home page" button must never do. The project page always resolves,
-     * and its README links onward to the Pages site for whoever wants the prettier one.
+     * That setting is a precondition, not a detail — while Pages was off this address
+     * answered 404, which is the one thing a "home page" button must never do, and the
+     * button pointed at the project page instead. If Pages is ever switched off again,
+     * point this back at [projectUrl].
      */
-    fun siteUrl(): String = "https://github.com/$REPO#readme"
-
-    /**
-     * The landing page in docs/, once Pages is enabled (Settings → Pages → main, /docs).
-     * Kept here because the release script and the README both point at it.
-     */
-    fun pagesUrl(): String {
+    fun siteUrl(): String {
         val (owner, repo) = REPO.split('/', limit = 2).let { it[0] to it[1] }
         return "https://$owner.github.io/$repo/"
     }
+
+    /** The repository itself, which renders the README. Always resolves. */
+    fun projectUrl(): String = "https://github.com/$REPO"
 
     fun releasesApiUrl(perPage: Int = 30): String =
         "https://api.github.com/repos/$REPO/releases?per_page=$perPage"
