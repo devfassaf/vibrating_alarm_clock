@@ -148,6 +148,8 @@
     <string name="check_amplitude_description">Whether the hardware can vary strength. If not, intensity is emulated with short pulses.</string>
     <string name="check_system_vibration">System vibration strength</string>
     <string name="check_system_vibration_description">The app already asks for the strongest vibration the hardware can produce — 255 is the ceiling, not a setting here. Android then scales it by the system\'s own vibration strength, so if that is not at maximum even the strongest pattern arrives weakened. Raise "Vibration intensity" for alarms in the system sound settings.</string>
+    <string name="check_dnd">Do Not Disturb</string>
+    <string name="check_dnd_description">Silent and vibrate-only modes do not silence this alarm — it goes out on the alarm channel, which neither of them touches. Do Not Disturb set to total silence does mute alarms.</string>
     <string name="check_oem">Samsung background limits</string>
     <string name="check_oem_description">In Device care → Battery, keep this app out of "Sleeping apps" and turn off "Put unused apps to sleep". Being put to sleep cancels every scheduled alarm, and no app can detect it.</string>
     <string name="reliability_no_settings_page">This device has no settings page for that; open it manually from system settings.</string>
