@@ -23,6 +23,7 @@ enum class CheckId {
     BATTERY_OPTIMIZATION,
     AMPLITUDE_CONTROL,
     SYSTEM_VIBRATION_STRENGTH,
+    DND_TOTAL_SILENCE,
     OEM_BACKGROUND_LIMITS,
 }
 
@@ -59,6 +60,7 @@ class ReliabilityChecks(
         batteryOptimization(),
         amplitudeControl(),
         systemVibrationStrength(),
+        dndTotalSilence(),
         oemBackgroundLimits(),
     )
 
@@ -117,6 +119,26 @@ class ReliabilityChecks(
     )
 
     /**
+     * Silent and vibrate-only modes never silence this app: sound goes out on the alarm
+     * stream and vibration with alarm usage, and the ringer mode governs neither. Do Not
+     * Disturb set to **total silence** is the one exception — it mutes alarms too, and
+     * that is a real "my alarm did not go off" cause worth naming.
+     *
+     * Only the current filter is readable without notification-policy access, which is
+     * enough: total silence is the setting that matters.
+     */
+    private fun dndTotalSilence(): CheckResult {
+        val filter = context.getSystemService(NotificationManager::class.java)
+            .currentInterruptionFilter
+        val silenced = filter == NotificationManager.INTERRUPTION_FILTER_NONE
+        return CheckResult(
+            id = CheckId.DND_TOTAL_SILENCE,
+            status = if (silenced) CheckStatus.ACTION_NEEDED else CheckStatus.OK,
+            fixable = true,
+        )
+    }
+
+    /**
      * Samsung's "put unused apps to sleep" (and its equivalents elsewhere) can
      * force-stop the app, which silently cancels every scheduled alarm. There is
      * no API to read that list, so this one is a guided manual step.
@@ -156,6 +178,13 @@ class ReliabilityChecks(
 
         CheckId.AMPLITUDE_CONTROL -> false
 
+        // The Zen settings action is documented but not exposed as a Settings constant, so
+        // it is named here and falls back to the pages that definitely exist.
+        CheckId.DND_TOTAL_SILENCE ->
+            start(Intent(ACTION_ZEN_MODE_SETTINGS)) ||
+                start(Intent(Settings.ACTION_SOUND_SETTINGS)) ||
+                start(Intent(Settings.ACTION_SETTINGS))
+
         // No public intent lands on the vibration-intensity page itself; the sound
         // settings screen is one tap away from it on both stock Android and One UI.
         CheckId.SYSTEM_VIBRATION_STRENGTH ->
@@ -181,6 +210,8 @@ class ReliabilityChecks(
     }
 
     private companion object {
+        const val ACTION_ZEN_MODE_SETTINGS = "android.settings.ZEN_MODE_SETTINGS"
+
         val SAMSUNG_BATTERY_INTENTS: List<() -> Intent> = listOf(
             {
                 Intent().setClassName(

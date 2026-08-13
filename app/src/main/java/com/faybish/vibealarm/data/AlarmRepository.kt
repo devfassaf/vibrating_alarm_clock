@@ -33,6 +33,12 @@ class AlarmRepository(private val db: AppDb) {
 
     suspend fun deleteAlarm(id: Long) = alarmDao.delete(id)
 
+    /**
+     * Disabling also drops the live instance, and that is load-bearing: a chain left
+     * active would be picked up by `SessionRuntime.resumeAll` on the next boot and re-armed
+     * — an alarm the user switched off, ringing again after a restart. Resume walks
+     * instances, not the enabled flag, so the flag has to take its instance with it.
+     */
     suspend fun setAlarmEnabled(id: Long, enabled: Boolean) {
         alarmDao.setEnabled(id, enabled)
         if (!enabled) instanceDao.deleteActiveForAlarm(id)

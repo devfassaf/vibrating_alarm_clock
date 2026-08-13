@@ -18,7 +18,13 @@ import kotlinx.coroutines.launch
 /**
  * Plays an alarm ringtone on the alarm stream.
  *
- * Two things here are less obvious than they look:
+ * **Silent and vibrate-only modes do not silence this.** Everything goes out with
+ * [AudioAttributes.USAGE_ALARM], which the platform routes to `STREAM_ALARM` — the one
+ * stream the ringer mode does not touch, because "silent" means "do not ring for other
+ * people", not "do not wake me up". The only setting that can still mute it is Do Not
+ * Disturb configured for total silence, which the Reliability screen reports.
+ *
+ * Two more things here are less obvious than they look:
  *  - Per-alarm volume has to move the alarm *stream* volume (saved and restored),
  *    because [MediaPlayer.setVolume] is relative to it — with the stream at zero
  *    the alarm would be silent no matter what we set.
@@ -43,7 +49,8 @@ class SoundEngine(
      *   climbs to it over this long. The ramp is the only part of playback that keeps
      *   running after this call returns.
      */
-    fun play(ringtoneUri: String?, volume: Float, rampMillis: Long = 0L) {
+    /** @return false when no source could be played at all — the one case worth logging. */
+    fun play(ringtoneUri: String?, volume: Float, rampMillis: Long = 0L): Boolean {
         stop()
         val sources = buildList {
             ringtoneUri?.takeIf { it.isNotBlank() }?.let { add(it.toUri()) }
@@ -53,14 +60,15 @@ class SoundEngine(
         for ((index, uri) in sources.withIndex()) {
             if (start(uri, volume, rampMillis)) {
                 if (index > 0) logger.log(ReliabilityLogger.FALLBACK_SOUND_USED, "system default")
-                return
+                return true
             }
         }
         if (startBundledFallback(volume, rampMillis)) {
             logger.log(ReliabilityLogger.FALLBACK_SOUND_USED, "bundled asset")
-        } else {
-            logger.log(ReliabilityLogger.FALLBACK_SOUND_USED, "no playable source")
+            return true
         }
+        logger.log(ReliabilityLogger.FALLBACK_SOUND_USED, "no playable source")
+        return false
     }
 
     private fun start(uri: Uri, volume: Float, rampMillis: Long): Boolean = try {
@@ -131,9 +139,23 @@ class SoundEngine(
         val requested = volume.coerceIn(0f, 1f)
         if (savedStreamVolume != null) return 1f
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
+        // Never zero, even at the bottom of the slider: an alarm the user asked to hear
+        // must make a sound.
         val target = (requested * max).toInt().coerceIn(1, max)
         return try {
             savedStreamVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            // Some OEM volume panels can leave the alarm stream muted, and a muted stream
+            // ignores the level we set. Unmuting is best-effort: it is refused under a
+            // total-silence policy, where the fallback below is all that is left.
+            if (audioManager.isStreamMute(AudioManager.STREAM_ALARM)) {
+                runCatching {
+                    audioManager.adjustStreamVolume(
+                        AudioManager.STREAM_ALARM,
+                        AudioManager.ADJUST_UNMUTE,
+                        0,
+                    )
+                }
+            }
             audioManager.setStreamVolume(AudioManager.STREAM_ALARM, target, 0)
             1f
         } catch (e: SecurityException) {
@@ -160,10 +182,15 @@ class SoundEngine(
         runCatching { current.release() }
     }
 
-    private companion object {
+    internal companion object {
         /** Fine enough that the climb is not heard as steps, coarse enough to be free. */
-        const val RAMP_STEP_MS = 200L
+        private const val RAMP_STEP_MS = 200L
 
+        /**
+         * What keeps the alarm audible in silent and vibrate-only modes: alarm usage routes
+         * playback to the alarm stream, which the ringer mode does not govern. Exposed so a
+         * test can assert it, because dropping it would be silent in every sense.
+         */
         val ALARM_ATTRIBUTES: AudioAttributes = AudioAttributes.Builder()
             .setUsage(AudioAttributes.USAGE_ALARM)
             .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)

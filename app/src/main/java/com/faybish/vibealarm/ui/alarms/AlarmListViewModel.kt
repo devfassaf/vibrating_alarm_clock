@@ -3,6 +3,7 @@ package com.faybish.vibealarm.ui.alarms
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.faybish.vibealarm.AppGraph
+import com.faybish.vibealarm.alarm.AlarmServiceStarter
 import com.faybish.vibealarm.alarm.PreviewEngine
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.ScheduleCodec
@@ -191,6 +192,7 @@ class AlarmListViewModel : ViewModel() {
         onToggled: (AlarmEntity, Instant?) -> Unit = { _, _ -> },
     ) {
         viewModelScope.launch {
+            if (!enabled) silenceIfRinging(alarmId)
             scheduler.onAlarmToggled(alarmId, enabled)
             val fresh = repository.getAlarm(alarmId) ?: return@launch
             onToggled(fresh, nextTrigger(fresh))
@@ -198,7 +200,22 @@ class AlarmListViewModel : ViewModel() {
     }
 
     fun delete(alarmId: Long) {
-        viewModelScope.launch { scheduler.onAlarmDeleted(alarmId) }
+        viewModelScope.launch {
+            silenceIfRinging(alarmId)
+            scheduler.onAlarmDeleted(alarmId)
+        }
+    }
+
+    /**
+     * Switching an alarm off, or deleting it, while it is ringing has to stop the noise.
+     *
+     * Cancelling the armed trigger says nothing about the ring already in progress: the
+     * service would keep playing to the end of its window — up to half an hour for a
+     * ringtone — for an alarm the user has just turned off or thrown away.
+     */
+    private fun silenceIfRinging(alarmId: Long) {
+        AlarmServiceStarter.stop(AppGraph.deviceProtectedContext, alarmId)
+        AppGraph.notifications.cancelForAlarm(alarmId)
     }
 
     /** Feels the alarm's own pattern at the currently chosen intensity. */
