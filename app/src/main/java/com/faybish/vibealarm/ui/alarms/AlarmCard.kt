@@ -49,6 +49,7 @@ import com.faybish.vibealarm.data.RingMode
 import com.faybish.vibealarm.data.ScheduleCodec
 import com.faybish.vibealarm.data.applying
 import com.faybish.vibealarm.domain.AlertSelection
+import com.faybish.vibealarm.domain.AutoSilence
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
 import com.faybish.vibealarm.ui.components.LabeledRow
@@ -406,35 +407,66 @@ private fun SoundSettings(
             leadingIcon = Icons.Filled.MusicNote,
             onPreview = onPreview,
         )
-        OptionChips(
-            title = stringResource(R.string.field_auto_silence),
-            options = listOf(
-                60 to stringResource(R.string.minutes_short, 1),
-                120 to stringResource(R.string.minutes_short, 2),
-                300 to stringResource(R.string.minutes_short, 5),
-                600 to stringResource(R.string.minutes_short, 10),
-            ),
-            selected = alarm.autoSilenceSeconds,
-            onSelected = { onChange(alarm.copy(autoSilenceSeconds = it)) },
+        AutoSilenceChips(alarm, onChange)
+        // Every ring of the chain climbs again, so this is about how each one starts, not
+        // just the first.
+        com.faybish.vibealarm.ui.components.SwitchRow(
+            title = stringResource(R.string.field_sound_ramp_up),
+            subtitle = stringResource(R.string.field_sound_ramp_up_hint),
+            checked = alarm.soundRampUp,
+            onCheckedChange = { onChange(alarm.copy(soundRampUp = it)) },
         )
     }
+}
+
+/**
+ * The presets plus a chip for any number of seconds. "How long should it ring" is a
+ * question about a specific bedroom, and whole minutes are a coarse unit for it.
+ */
+@Composable
+private fun AutoSilenceChips(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) {
+    var editing by remember { mutableStateOf(false) }
+    val isCustom = AutoSilence.isCustom(alarm.autoSilenceSeconds)
+
+    OptionChips(
+        title = stringResource(R.string.field_auto_silence),
+        options = AutoSilence.PRESET_SECONDS.map { it to durationLabel(it) },
+        selected = alarm.autoSilenceSeconds,
+        onSelected = { onChange(alarm.copy(autoSilenceSeconds = it)) },
+        customLabel = if (isCustom) {
+            durationLabel(alarm.autoSilenceSeconds)
+        } else {
+            stringResource(R.string.field_auto_silence_custom)
+        },
+        customSelected = isCustom,
+        onCustomClick = { editing = true },
+    )
+
+    if (editing) {
+        SecondsInputDialog(
+            initialSeconds = alarm.autoSilenceSeconds,
+            onDismiss = { editing = false },
+            onConfirm = { seconds ->
+                editing = false
+                onChange(alarm.copy(autoSilenceSeconds = AutoSilence.clamp(seconds)))
+            },
+        )
+    }
+}
+
+/** Whole minutes read as minutes; anything else says seconds, because that is what it is. */
+@Composable
+private fun durationLabel(seconds: Int): String = if (seconds % 60 == 0) {
+    stringResource(R.string.minutes_short, seconds / 60)
+} else {
+    stringResource(R.string.seconds_short, seconds)
 }
 
 @Composable
 private fun SnoozeSettings(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) {
     Column {
-        OptionChips(
-            title = stringResource(R.string.field_snooze_interval),
-            options = listOf(
-                1 to stringResource(R.string.minutes_short, 1),
-                3 to stringResource(R.string.minutes_short, 3),
-                5 to stringResource(R.string.minutes_short, 5),
-                10 to stringResource(R.string.minutes_short, 10),
-            ),
-            selected = alarm.snoozeIntervalMinutes,
-            onSelected = { onChange(alarm.copy(snoozeIntervalMinutes = it)) },
-            leadingIcon = Icons.Filled.Snooze,
-        )
+        // Repeats first: the interval below only exists because of the answer here, and a
+        // setting that governs another belongs above it.
         OptionChips(
             title = stringResource(R.string.field_snooze_repeats),
             options = listOf(
@@ -446,7 +478,23 @@ private fun SnoozeSettings(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) 
             ),
             selected = alarm.snoozeRepeatCount,
             onSelected = { onChange(alarm.copy(snoozeRepeatCount = it)) },
+            leadingIcon = Icons.Filled.Snooze,
         )
+        // With no repeats there is no automatic snooze to space out. A snooze pressed by
+        // hand still uses the stored interval — it just has nothing to configure here.
+        if (alarm.snoozeRepeatCount != 0) {
+            OptionChips(
+                title = stringResource(R.string.field_snooze_interval),
+                options = listOf(
+                    1 to stringResource(R.string.minutes_short, 1),
+                    3 to stringResource(R.string.minutes_short, 3),
+                    5 to stringResource(R.string.minutes_short, 5),
+                    10 to stringResource(R.string.minutes_short, 10),
+                ),
+                selected = alarm.snoozeIntervalMinutes,
+                onSelected = { onChange(alarm.copy(snoozeIntervalMinutes = it)) },
+            )
+        }
         // "Until dismissed" plus a dark screen means nothing will ever stop it on its
         // own — the opposite of what a hands-free alarm is for. Say so plainly.
         if (alarm.snoozeRepeatCount == -1 && !alarm.turnScreenOn) {

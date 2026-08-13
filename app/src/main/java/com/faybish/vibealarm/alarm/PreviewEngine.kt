@@ -24,7 +24,7 @@ class PreviewEngine(
 ) {
 
     private val vibration = VibrationEngine(context)
-    private val sound = SoundEngine(context, logger)
+    private val sound = SoundEngine(context, logger, scope)
     private var job: Job? = null
 
     val hasAmplitudeControl: Boolean get() = vibration.hasAmplitudeControl

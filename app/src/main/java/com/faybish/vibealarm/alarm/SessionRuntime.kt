@@ -141,8 +141,11 @@ class SessionRuntime(
                     "alarm=${alarm.id} instance=${entity.id} snoozesUsed=${next.snoozesUsed}",
                 )
                 // Last night's "you never switched it off" notice must not sit next to
-                // tonight's alarm as if it were about this one.
+                // tonight's alarm as if it were about this one — and neither must the
+                // "snoozed until 07:35" notice from the ring this one is the sequel to,
+                // which otherwise sits in the shade with the same title as the live alarm.
                 notifications.cancelUnattended(alarm.id)
+                notifications.cancelSnoozed(alarm.id)
                 sink.showFiring(alarm, entity.id)
             }
 

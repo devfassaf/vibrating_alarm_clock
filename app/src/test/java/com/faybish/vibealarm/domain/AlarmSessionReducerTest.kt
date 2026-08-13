@@ -209,6 +209,28 @@ class AlarmSessionReducerTest {
         assertThat(done.endedReason).isEqualTo(EndReason.AUTO_DISMISSED)
     }
 
+    /**
+     * "No snooze" turns off the *automatic* chain, not the button. The interval is hidden
+     * from the editor in that state, and this is what it is still doing: one snooze if the
+     * user asks for it by hand, then the chain ends.
+     */
+    @Test
+    fun `with no automatic repeats a hand-pressed snooze still works once`() {
+        val config = config(repeatCount = 0, intervalMinutes = 5)
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+
+        val (snoozed, effects) = reduce(firing, config, SessionEvent.UserSnooze(occurrence))
+        assertThat(snoozed.phase).isEqualTo(SessionPhase.SNOOZED)
+        assertThat(snoozed.nextActionAt).isEqualTo(occurrence.plus(Duration.ofMinutes(5)))
+        assertThat(effects).contains(SessionEffect.ArmExact(snoozed.nextActionAt))
+
+        // And it is exactly one: the ring after it ends the chain.
+        val (refire, _) = reduce(snoozed, config, SessionEvent.Fire(snoozed.nextActionAt))
+        val (done, _) = reduce(refire, config, SessionEvent.PlaybackComplete(snoozed.nextActionAt))
+        assertThat(done.phase).isEqualTo(SessionPhase.DONE)
+        assertThat(done.endedReason).isEqualTo(EndReason.AUTO_DISMISSED)
+    }
+
     @Test
     fun `user dismiss while firing stops outputs and schedules next`() {
         val config = config(repeatCount = 3)

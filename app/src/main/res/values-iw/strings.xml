@@ -36,6 +36,8 @@
     <string name="action_open_settings">פתיחת ההגדרות</string>
     <string name="action_snooze">נודניק</string>
     <string name="action_dismiss">כיבוי</string>
+    <string name="action_drag_to_snooze">גררו לנודניק</string>
+    <string name="action_drag_to_dismiss">גררו לכיבוי</string>
     <string name="action_discard">השלכת השינויים</string>
     <string name="action_keep_editing">חזרה לעריכה</string>
 
@@ -62,6 +64,12 @@
     <string name="ringtone_default">צלצול ברירת המחדל</string>
     <string name="field_volume">עוצמת צליל</string>
     <string name="field_auto_silence">משך צלצול</string>
+    <string name="field_auto_silence_custom">מותאם</string>
+    <string name="field_auto_silence_custom_hint">בין %1$d ל-%2$d שניות.</string>
+    <string name="field_seconds">שניות</string>
+    <string name="seconds_short">%1$d שנ׳</string>
+    <string name="field_sound_ramp_up">התחלה חלשה והתגברות</string>
+    <string name="field_sound_ramp_up_hint">הצלצול מתחיל שקט ומגיע לעוצמה שבחרתם בהדרגה, בכל צלצול בשרשרת. הרטט לא מושפע — את הצורה שלו קובעת התבנית.</string>
     <string name="field_snooze_interval">מרווח נודניק</string>
     <string name="field_snooze_repeats">חזרות נודניק</string>
     <string name="field_turn_screen_on">הדלקת מסך</string>

@@ -92,7 +92,13 @@ fun SwitchRow(
     }
 }
 
-/** Single-choice chip row; scrolls horizontally so long option sets stay usable. */
+/**
+ * Single-choice chip row; scrolls horizontally so long option sets stay usable.
+ *
+ * @param customLabel when set, a final chip is appended that does not carry a value of its
+ *   own — it opens whatever [onCustomClick] does and shows the value it produced. The
+ *   presets answer the question quickly; the extra chip is there for the case they miss.
+ */
 @Composable
 fun <T> OptionChips(
     title: String,
@@ -101,6 +107,9 @@ fun <T> OptionChips(
     onSelected: (T) -> Unit,
     modifier: Modifier = Modifier,
     leadingIcon: ImageVector? = null,
+    customLabel: String? = null,
+    customSelected: Boolean = false,
+    onCustomClick: (() -> Unit)? = null,
 ) {
     Column(modifier = modifier.padding(vertical = 8.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -123,9 +132,16 @@ fun <T> OptionChips(
         ) {
             options.forEach { (value, label) ->
                 FilterChip(
-                    selected = value == selected,
+                    selected = value == selected && !customSelected,
                     onClick = { onSelected(value) },
                     label = { Text(label) },
+                )
+            }
+            if (customLabel != null && onCustomClick != null) {
+                FilterChip(
+                    selected = customSelected,
+                    onClick = onCustomClick,
+                    label = { Text(customLabel) },
                 )
             }
         }

@@ -50,6 +50,8 @@ data class AlarmEntity(
     val turnScreenOn: Boolean = true,
     /** Sound mode: how long the ringtone plays before auto-snooze/dismiss. */
     val autoSilenceSeconds: Int = 60,
+    /** Sound mode: start quiet and climb to [volume] instead of opening at full level. */
+    val soundRampUp: Boolean = false,
 
     // Snooze
     val snoozeIntervalMinutes: Int = 5,

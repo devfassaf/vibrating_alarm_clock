@@ -2,22 +2,16 @@ package com.faybish.vibealarm.ui.ringing
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AlarmOff
 import androidx.compose.material.icons.filled.Snooze
-import androidx.compose.foundation.BorderStroke
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,6 +27,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.ui.components.DragToConfirm
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
@@ -92,33 +87,27 @@ fun RingingScreen(
                 )
             }
 
-            Row(
+            // Dragged, not tapped: a phone being picked up half asleep, or lying under a
+            // duvet, generates taps nobody meant — and a tap on the wrong one of these two
+            // is a missed morning.
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(bottom = 48.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                OutlinedButton(
-                    onClick = onSnooze,
-                    modifier = Modifier.height(72.dp),
-                    border = BorderStroke(1.dp, foreground.copy(alpha = 0.6f)),
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = foreground),
-                ) {
-                    Icon(Icons.Filled.Snooze, contentDescription = null, Modifier.size(28.dp))
-                    Text(
-                        text = stringResource(R.string.action_snooze),
-                        modifier = Modifier.padding(start = 12.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
-                Button(onClick = onDismiss, modifier = Modifier.height(72.dp)) {
-                    Icon(Icons.Filled.AlarmOff, contentDescription = null, Modifier.size(28.dp))
-                    Text(
-                        text = stringResource(R.string.action_dismiss),
-                        modifier = Modifier.padding(start = 12.dp),
-                        style = MaterialTheme.typography.titleMedium,
-                    )
-                }
+                DragToConfirm(
+                    label = stringResource(R.string.action_drag_to_snooze),
+                    icon = Icons.Filled.Snooze,
+                    contentColor = foreground,
+                    onConfirm = onSnooze,
+                )
+                DragToConfirm(
+                    label = stringResource(R.string.action_drag_to_dismiss),
+                    icon = Icons.Filled.AlarmOff,
+                    contentColor = foreground,
+                    onConfirm = onDismiss,
+                )
             }
         }
     }

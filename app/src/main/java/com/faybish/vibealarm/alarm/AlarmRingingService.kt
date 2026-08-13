@@ -12,6 +12,7 @@ import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.ReliabilityLogger
 import com.faybish.vibealarm.data.RingMode
 import com.faybish.vibealarm.domain.SessionEvent
+import com.faybish.vibealarm.domain.VolumeRamp
 import java.time.Instant
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -64,7 +65,7 @@ class AlarmRingingService : Service() {
     override fun onCreate() {
         super.onCreate()
         vibration = VibrationEngine(this)
-        sound = SoundEngine(this, logger)
+        sound = SoundEngine(this, logger, scope)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -158,8 +159,6 @@ class AlarmRingingService : Service() {
                 0L
             }
 
-            if (!vibrateOnly) sound.play(alarm.ringtoneUri, alarm.volume)
-
             // A vibration-only alarm lasts exactly one pass of the pattern. That is
             // the entire point: it stops by itself without anyone touching the phone.
             // The floor guards against a device with no vibrator reporting 0 and
@@ -168,6 +167,17 @@ class AlarmRingingService : Service() {
                 patternMs.coerceAtLeast(MIN_WINDOW_MS)
             } else {
                 alarm.autoSilenceSeconds.coerceAtLeast(1) * 1000L
+            }
+
+            if (!vibrateOnly) {
+                sound.play(
+                    ringtoneUri = alarm.ringtoneUri,
+                    volume = alarm.volume,
+                    // Every ring of the chain climbs again: the snooze put the room back
+                    // to quiet, so opening the next one at full volume would undo the
+                    // whole point of a gentle start.
+                    rampMillis = if (alarm.soundRampUp) VolumeRamp.rampMillis(windowMs) else 0L,
+                )
             }
             acquireWakeLock(windowMs + WAKE_LOCK_MARGIN_MS)
 

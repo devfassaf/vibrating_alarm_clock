@@ -40,6 +40,7 @@ class AlarmEditsTest {
         "intensityScale" to { it.copy(intensityScale = 0.4f) },
         "turnScreenOn" to { it.copy(turnScreenOn = false) },
         "autoSilenceSeconds" to { it.copy(autoSilenceSeconds = 300) },
+        "soundRampUp" to { it.copy(soundRampUp = true) },
         "snoozeIntervalMinutes" to { it.copy(snoozeIntervalMinutes = 1) },
         "snoozeRepeatCount" to { it.copy(snoozeRepeatCount = -1) },
         "backgroundType" to { it.copy(backgroundType = BackgroundType.IMAGE) },
