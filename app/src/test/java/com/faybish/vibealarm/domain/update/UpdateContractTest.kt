@@ -122,7 +122,7 @@ class UpdateContractTest {
     fun `the site url matches the page this repo actually publishes`() {
         // GitHub Pages for a project repo serves at <owner>.github.io/<repo>/ from the
         // docs/ folder — which is where the landing page lives.
-        assertThat(UpdateAssets.pagesUrl()).isEqualTo(
+        assertThat(UpdateAssets.siteUrl()).isEqualTo(
             "https://${UpdateAssets.REPO.substringBefore('/')}.github.io/" +
                 "${UpdateAssets.REPO.substringAfter('/')}/",
         )

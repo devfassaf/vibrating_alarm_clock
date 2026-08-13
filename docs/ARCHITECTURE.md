@@ -139,10 +139,10 @@ alarms configured to turn the screen on. Its two actions must be **dragged**, no
 (`DragToConfirm`, 60% of the track): a phone picked up half asleep produces taps nobody
 meant. Volume keys snooze while it has focus — with the screen off no app can see them.
 
-`docs/index.html` is the landing page served by GitHub Pages (Settings → Pages → `main`,
-`/docs`). The app's own "home page" button opens the **project page** instead
-(`UpdateAssets.siteUrl()`), because the Pages address 404s until the repository owner turns
-Pages on and a home button must not 404.
+`docs/index.html` is the landing page, served by GitHub Pages from `main` + `/docs`, and it
+is what the app's "home page" button opens (`UpdateAssets.siteUrl()`). That Pages setting is
+a precondition of the URL: while it was off the address 404'd, and the button pointed at
+`projectUrl()` instead — a home button that 404s is worse than a plain repository page.
 
 ## Data
 

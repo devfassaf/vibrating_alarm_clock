@@ -67,9 +67,9 @@ class ShareMessageTest {
     @Test
     fun `the site url is derived from the repo, so the two cannot drift`() {
         val (owner, repo) = UpdateAssets.REPO.split('/')
-        assertThat(UpdateAssets.pagesUrl()).isEqualTo("https://$owner.github.io/$repo/")
-        // What the app actually opens has to be a page that exists whether or not the
-        // owner has switched Pages on.
-        assertThat(UpdateAssets.siteUrl()).isEqualTo("https://github.com/$owner/$repo#readme")
+        // The landing page, served by Pages from main /docs.
+        assertThat(UpdateAssets.siteUrl()).isEqualTo("https://$owner.github.io/$repo/")
+        // The address that resolves no matter how the repository is configured.
+        assertThat(UpdateAssets.projectUrl()).isEqualTo("https://github.com/$owner/$repo")
     }
 }
