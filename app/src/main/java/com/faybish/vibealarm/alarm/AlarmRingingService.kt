@@ -11,6 +11,7 @@ import com.faybish.vibealarm.AppGraph
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.ReliabilityLogger
 import com.faybish.vibealarm.data.RingMode
+import com.faybish.vibealarm.domain.AlertWindow
 import com.faybish.vibealarm.domain.SessionEvent
 import com.faybish.vibealarm.domain.VolumeRamp
 import java.time.Instant
@@ -23,9 +24,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /**
- * Runs one alerting window: plays the pattern (or ringtone) exactly once, then
- * hands control back to [SessionRuntime], which decides whether to auto-snooze
- * or finish the chain. The service does not stay alive across a snooze — the
+ * Runs one alerting window: plays the pattern once and the ringtone for as long as the
+ * user asked, then hands control back to [SessionRuntime], which decides whether to
+ * auto-snooze or finish the chain. The window is the longer of the two — see [AlertWindow]. The service does not stay alive across a snooze — the
  * chain lives in the database and in AlarmManager, not in this process.
  *
  * This service is the only place that performs the `Fire` transition, because it
@@ -146,28 +147,31 @@ class AlarmRingingService : Service() {
         timerJob = scope.launch {
             val segments = AppGraph.repository.segmentsForAlarm(alarm)
             val vibrateOnly = alarm.mode == RingMode.VIBRATE_ONLY
+            val vibrates = vibrateOnly || alarm.vibrateWithSound
 
-            val patternMs = if (vibrateOnly || alarm.vibrateWithSound) {
+            // Always once, even alongside a ringtone: the pattern is what decides how long
+            // the phone vibrates, and a pattern that loops until the sound stops is the
+            // ringtone deciding instead.
+            val patternMs = if (vibrates) {
                 vibration.play(
                     segments = segments,
                     intensityScale = alarm.intensityScale,
-                    // Alongside a ringtone the pattern loops; on its own it plays once.
-                    repeat = !vibrateOnly,
+                    repeat = false,
                     forcePwmEmulation = AppGraph.settings.forcePwmEmulation,
                 )
             } else {
                 0L
             }
 
-            // A vibration-only alarm lasts exactly one pass of the pattern. That is
-            // the entire point: it stops by itself without anyone touching the phone.
-            // The floor guards against a device with no vibrator reporting 0 and
-            // turning the chain into an instant snooze loop.
-            val windowMs = if (vibrateOnly) {
-                patternMs.coerceAtLeast(MIN_WINDOW_MS)
-            } else {
-                alarm.autoSilenceSeconds.coerceAtLeast(1) * 1000L
-            }
+            // Two independent lengths — the ringtone's is the user's setting, the
+            // vibration's is the pattern — and the window is whichever ends last, so
+            // neither can cut the other short.
+            val plan = AlertWindow.plan(
+                patternMs = patternMs,
+                autoSilenceSeconds = alarm.autoSilenceSeconds,
+                sound = !vibrateOnly,
+                vibration = vibrates,
+            )
 
             if (!vibrateOnly) {
                 sound.play(
@@ -176,12 +180,26 @@ class AlarmRingingService : Service() {
                     // Every ring of the chain climbs again: the snooze put the room back
                     // to quiet, so opening the next one at full volume would undo the
                     // whole point of a gentle start.
-                    rampMillis = if (alarm.soundRampUp) VolumeRamp.rampMillis(windowMs) else 0L,
+                    rampMillis = if (alarm.soundRampUp) {
+                        VolumeRamp.rampMillis(plan.soundMs)
+                    } else {
+                        0L
+                    },
                 )
             }
-            acquireWakeLock(windowMs + WAKE_LOCK_MARGIN_MS)
+            acquireWakeLock(plan.windowMs + WAKE_LOCK_MARGIN_MS)
 
-            delay(windowMs + PLAYBACK_TAIL_MS)
+            // A ringtone shorter than the pattern is silenced on its own schedule; a
+            // waveform played once needs no timer, it ends by itself. Child of this job, so
+            // cancelling playback cancels it too.
+            if (plan.stopSoundBeforeWindowEnds) {
+                launch {
+                    delay(plan.soundMs)
+                    sound.stop()
+                }
+            }
+
+            delay(plan.windowMs + PLAYBACK_TAIL_MS)
 
             // Detach before dispatching: the completion transition emits StopOutputs,
             // which must not cancel the coroutine that is applying the effects.
@@ -249,7 +267,6 @@ class AlarmRingingService : Service() {
         private const val WAKE_LOCK_MARGIN_MS = 10_000L
         private const val TRANSITION_WAKE_LOCK_MS = 30_000L
         private const val PLAYBACK_TAIL_MS = 250L
-        private const val MIN_WINDOW_MS = 1_000L
     }
 }
 

@@ -50,6 +50,8 @@ import com.faybish.vibealarm.data.ScheduleCodec
 import com.faybish.vibealarm.data.applying
 import com.faybish.vibealarm.domain.AlertSelection
 import com.faybish.vibealarm.domain.AutoSilence
+import com.faybish.vibealarm.domain.SnoozeInterval
+import com.faybish.vibealarm.domain.SnoozeRepeats
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
 import com.faybish.vibealarm.ui.components.LabeledRow
@@ -436,15 +438,20 @@ private fun AutoSilenceChips(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit
         customLabel = if (isCustom) {
             durationLabel(alarm.autoSilenceSeconds)
         } else {
-            stringResource(R.string.field_auto_silence_custom)
+            stringResource(R.string.option_custom)
         },
         customSelected = isCustom,
         onCustomClick = { editing = true },
     )
 
     if (editing) {
-        SecondsInputDialog(
-            initialSeconds = alarm.autoSilenceSeconds,
+        NumberInputDialog(
+            title = stringResource(R.string.field_auto_silence),
+            fieldLabel = stringResource(R.string.field_seconds),
+            minimum = AutoSilence.MIN_SECONDS,
+            maximum = AutoSilence.MAX_SECONDS,
+            initial = alarm.autoSilenceSeconds,
+            parse = AutoSilence::parse,
             onDismiss = { editing = false },
             onConfirm = { seconds ->
                 editing = false
@@ -464,40 +471,88 @@ private fun durationLabel(seconds: Int): String = if (seconds % 60 == 0) {
 
 @Composable
 private fun SnoozeSettings(alarm: AlarmEntity, onChange: (AlarmEntity) -> Unit) {
+    var editingRepeats by remember { mutableStateOf(false) }
+    var editingInterval by remember { mutableStateOf(false) }
+
     Column {
         // Repeats first: the interval below only exists because of the answer here, and a
         // setting that governs another belongs above it.
+        val customRepeats = SnoozeRepeats.isCustom(alarm.snoozeRepeatCount)
         OptionChips(
             title = stringResource(R.string.field_snooze_repeats),
             options = listOf(
-                0 to stringResource(R.string.snooze_repeats_none),
+                SnoozeRepeats.NONE to stringResource(R.string.snooze_repeats_none),
                 1 to "1",
                 3 to "3",
                 5 to "5",
-                -1 to stringResource(R.string.snooze_repeats_until_dismissed),
+                SnoozeRepeats.UNTIL_DISMISSED to
+                    stringResource(R.string.snooze_repeats_until_dismissed),
             ),
             selected = alarm.snoozeRepeatCount,
             onSelected = { onChange(alarm.copy(snoozeRepeatCount = it)) },
             leadingIcon = Icons.Filled.Snooze,
+            customLabel = if (customRepeats) {
+                alarm.snoozeRepeatCount.toString()
+            } else {
+                stringResource(R.string.option_custom)
+            },
+            customSelected = customRepeats,
+            onCustomClick = { editingRepeats = true },
         )
         // With no repeats there is no automatic snooze to space out. A snooze pressed by
         // hand still uses the stored interval — it just has nothing to configure here.
-        if (alarm.snoozeRepeatCount != 0) {
+        if (alarm.snoozeRepeatCount != SnoozeRepeats.NONE) {
+            val customInterval = SnoozeInterval.isCustom(alarm.snoozeIntervalMinutes)
             OptionChips(
                 title = stringResource(R.string.field_snooze_interval),
-                options = listOf(
-                    1 to stringResource(R.string.minutes_short, 1),
-                    3 to stringResource(R.string.minutes_short, 3),
-                    5 to stringResource(R.string.minutes_short, 5),
-                    10 to stringResource(R.string.minutes_short, 10),
-                ),
+                options = SnoozeInterval.PRESETS.map {
+                    it to stringResource(R.string.minutes_short, it)
+                },
                 selected = alarm.snoozeIntervalMinutes,
                 onSelected = { onChange(alarm.copy(snoozeIntervalMinutes = it)) },
+                customLabel = if (customInterval) {
+                    stringResource(R.string.minutes_short, alarm.snoozeIntervalMinutes)
+                } else {
+                    stringResource(R.string.option_custom)
+                },
+                customSelected = customInterval,
+                onCustomClick = { editingInterval = true },
+            )
+        }
+
+        if (editingRepeats) {
+            NumberInputDialog(
+                title = stringResource(R.string.field_snooze_repeats),
+                fieldLabel = stringResource(R.string.field_times),
+                minimum = SnoozeRepeats.MIN,
+                maximum = SnoozeRepeats.MAX,
+                initial = alarm.snoozeRepeatCount,
+                parse = SnoozeRepeats::parse,
+                onDismiss = { editingRepeats = false },
+                onConfirm = {
+                    editingRepeats = false
+                    onChange(alarm.copy(snoozeRepeatCount = SnoozeRepeats.clamp(it)))
+                },
+            )
+        }
+        if (editingInterval) {
+            NumberInputDialog(
+                title = stringResource(R.string.field_snooze_interval),
+                fieldLabel = stringResource(R.string.field_minutes),
+                minimum = SnoozeInterval.MIN,
+                maximum = SnoozeInterval.MAX,
+                initial = alarm.snoozeIntervalMinutes,
+                parse = SnoozeInterval::parse,
+                onDismiss = { editingInterval = false },
+                onConfirm = {
+                    editingInterval = false
+                    onChange(alarm.copy(snoozeIntervalMinutes = SnoozeInterval.clamp(it)))
+                },
             )
         }
         // "Until dismissed" plus a dark screen means nothing will ever stop it on its
         // own — the opposite of what a hands-free alarm is for. Say so plainly.
-        if (alarm.snoozeRepeatCount == -1 && !alarm.turnScreenOn) {
+        if (alarm.snoozeRepeatCount == SnoozeRepeats.UNTIL_DISMISSED && !alarm.turnScreenOn) {
             Text(
                 text = stringResource(R.string.snooze_until_dismissed_warning),
                 style = MaterialTheme.typography.bodySmall,

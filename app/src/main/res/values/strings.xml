@@ -14,6 +14,7 @@
     <!-- Generic actions -->
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_cancel_snooze">Cancel snooze</string>
     <string name="action_save">Save</string>
     <string name="action_delete">Delete</string>
     <string name="action_edit">Edit</string>
@@ -64,9 +65,11 @@
     <string name="ringtone_default">Default alarm sound</string>
     <string name="field_volume">Volume</string>
     <string name="field_auto_silence">Ring for</string>
-    <string name="field_auto_silence_custom">Custom</string>
-    <string name="field_auto_silence_custom_hint">Between %1$d and %2$d seconds.</string>
+    <string name="option_custom">Custom</string>
+    <string name="custom_range_hint">Between %1$d and %2$d.</string>
     <string name="field_seconds">Seconds</string>
+    <string name="field_minutes">Minutes</string>
+    <string name="field_times">Times</string>
     <string name="seconds_short">%1$d s</string>
     <string name="field_sound_ramp_up">Start quiet, get louder</string>
     <string name="field_sound_ramp_up_hint">The ringtone opens quietly and climbs to your chosen volume, on every ring of the chain. Vibration is unaffected — its shape comes from the pattern.</string>
@@ -123,6 +126,8 @@
     <string name="announce_disabled">This alarm is off — it will not ring until you turn it on.</string>
     <string name="announce_no_trigger">This alarm has no upcoming time — pick days or dates.</string>
 
+    <!-- A snooze waiting to ring again -->
+    <string name="snoozed_banner_title">Coming back at %1$s</string>
     <!-- Patterns -->
     <string name="pattern_in_use">This pattern is used by an alarm, so it cannot be deleted.</string>
     <string name="pattern_copied_from_preset">Saving creates your own copy; the built-in pattern stays unchanged.</string>
@@ -221,6 +226,10 @@
     <plurals name="reliability_banner_title">
         <item quantity="one">%1$d issue could stop an alarm</item>
         <item quantity="other">%1$d issues could stop an alarm</item>
+    </plurals>
+    <plurals name="snoozed_banner_remaining">
+        <item quantity="one">1 snooze left</item>
+        <item quantity="other">%1$d snoozes left</item>
     </plurals>
     <plurals name="notification_unattended_text">
         <item quantity="one">%1$s · rang once at %2$s</item>

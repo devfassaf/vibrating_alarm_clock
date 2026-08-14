@@ -80,6 +80,8 @@ class AlarmRepository(private val db: AppDb) {
 
     suspend fun allActiveInstances(): List<AlarmInstanceEntity> = instanceDao.getAllActive()
 
+    fun observeSnoozedInstances(): Flow<List<AlarmInstanceEntity>> = instanceDao.observeSnoozed()
+
     suspend fun getInstance(id: Long): AlarmInstanceEntity? = instanceDao.getById(id)
 
     suspend fun saveInstance(instance: AlarmInstanceEntity): Long {

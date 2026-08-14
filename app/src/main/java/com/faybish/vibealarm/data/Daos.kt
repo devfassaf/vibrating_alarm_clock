@@ -64,6 +64,10 @@ interface InstanceDao {
     @Query("SELECT * FROM instances WHERE state != 3")
     suspend fun getAllActive(): List<AlarmInstanceEntity>
 
+    /** Watched by the list screen, which offers to call off a snooze before it rings. */
+    @Query("SELECT * FROM instances WHERE state = 2 ORDER BY nextActionEpochMillis")
+    fun observeSnoozed(): Flow<List<AlarmInstanceEntity>>
+
     @Query("SELECT * FROM instances WHERE id = :id")
     suspend fun getById(id: Long): AlarmInstanceEntity?
 

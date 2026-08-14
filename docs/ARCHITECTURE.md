@@ -36,7 +36,10 @@ discipline.
 | `PatternSegment`, `RecorderQuantizer` | pattern shape and tap-recording cleanup |
 | `ScheduleSummarizer` | how a schedule is described ("Sunday, Saturday", "Every day") |
 | `TriggerDescriptor` | how the next ring is named (today / tomorrow / weekday / date) |
-| `AutoSilence`, `VolumeRamp` | the ring window's bounds and the volume climb |
+| `AutoSilence`, `SnoozeRepeats`, `SnoozeInterval` | the bounds on every free-choice number |
+| `AlertWindow` | how long one ring lasts when sound and vibration disagree |
+| `AlarmStreamVolume` | reaching the per-alarm level without turning other apps down |
+| `VolumeRamp` | the ringtone's climb from quiet |
 | `AlertSelection` | sound and vibration as two switches, with "neither" unrepresentable |
 | `update/` | version comparison and whether now is a good moment to offer an update |
 
@@ -64,11 +67,12 @@ reboots. The reducer is the only thing that decides what happens next:
    └▶ DONE(AUTO_DISMISSED) ── ReportUnattended + ScheduleNextOccurrence
 ```
 
-`PlaybackComplete` is what makes the whole thing hands-free: the vibration-only window is
-exactly one pass of the pattern (there is no "vibration finished" callback, so the length is
-computed from the pattern), and for a ringtone it is `autoSilenceSeconds`. **The snooze
-interval is measured from the end of the ring, not its start** — a 5-minute ringtone with a
-1-minute snooze is a 6-minute cycle.
+`PlaybackComplete` is what makes the whole thing hands-free. The ring has **two
+independent lengths** (`AlertWindow`): the ringtone plays for `autoSilenceSeconds`, the
+pattern plays once — there is no "vibration finished" callback, so its length is computed
+from the segments — and the window is whichever ends last, with the shorter one stopped on
+its own timer. **The snooze interval is measured from the end of the ring, not its start**:
+a 5-minute ringtone with a 1-minute snooze is a 6-minute cycle.
 
 Effects are applied in list order by `SessionRuntime`, which is the only place where the
 pure reducer meets Android. Two orderings are load-bearing: `Persist` before `ArmExact`, and
@@ -95,11 +99,17 @@ pure reducer meets Android. Two orderings are load-bearing: `Persist` before `Ar
 as short pulses (PWM); amplitude 255 is the hardware ceiling, and the system's own vibration
 strength scales everything below it.
 
-`SoundEngine` plays on `STREAM_ALARM` with `USAGE_ALARM`, moving the alarm stream to the
-per-alarm level and restoring it afterwards (player volume is relative to the stream, so
-this is the only way per-alarm volume can work). Sources are a fallback chain — the chosen
-ringtone, the system default, then a bundled asset — because before first unlock the user's
-own files are unreadable. The optional ramp steps the *player's* volume, never the stream.
+`SoundEngine` plays on `STREAM_ALARM` with `USAGE_ALARM`. Per-alarm volume needs the stream
+to be at least as loud as the level asked for, so the stream is **raised when too quiet and
+never lowered** (`AlarmStreamVolume`) — it is shared with every other alarm clock on the
+phone — and the remaining attenuation is the player's own volume. Sources are a fallback
+chain — the chosen ringtone, the system default, then a bundled asset — because before first
+unlock the user's own files are unreadable. The optional ramp steps the player's volume too,
+never the stream.
+
+Two alarm apps can therefore ring together, sound included. The vibrator cannot be shared:
+one device, and each new request interrupts the previous one, so whichever app vibrates last
+wins. That is a hardware limit, not something either app can arbitrate.
 
 **Silent and vibrate-only modes cannot silence either engine**, and that is deliberate: the
 ringer mode governs the ring and notification streams, not the alarm. The only interruption
@@ -129,7 +139,18 @@ because both mean one thing at the moment they are tapped.
 
 Saving switches the alarm on, closes the card, returns the list to the top, and answers
 with a snackbar naming the day, the time and the time left (`TriggerDescriptor` +
-`ui/format`). Pressing save means wanting the alarm, so an edit cannot leave it off.
+`ui/format`). Pressing save means wanting the alarm, so an edit cannot leave it off. Which
+card is open is `rememberSaveable`, so choosing a pattern — which navigates away — returns
+to the same open card with the draft intact.
+
+A chain waiting on a snooze appears as a `SnoozedBanner` above everything else, with the
+time it will ring, how many snoozes are left (`snoozedRings`, pure) and a button that ends
+the chain there and then — the same `UserDismiss` the ring itself would have taken, so the
+armed snooze is replaced by the alarm's next real occurrence.
+
+Free-choice numbers (ring duration in seconds, snooze count, snooze interval) share one
+`NumberInputDialog` whose Save stays disabled until the value is one the app will honour;
+the bounds live in `AutoSilence`, `SnoozeRepeats` and `SnoozeInterval`.
 
 `TimePickerDialog` offers both Material input modes — clock face and keypad — behind one
 icon, and remembers which one was last used in `SettingsStore.timeInputByKeyboard`.
@@ -173,7 +194,7 @@ opened again, nothing is re-armed. That is why it is presented as a condition, n
 
 ## Tests
 
-275 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
+309 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
 `domain/`; Robolectric tests for the wiring that a unit test cannot see — the real pipeline
 against AlarmManager and Room, the Room migration from a hand-built version-1 file, the
 notification wording in both languages, and that silent mode does not silence the engines.
