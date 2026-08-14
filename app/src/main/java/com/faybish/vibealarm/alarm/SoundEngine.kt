@@ -2,10 +2,12 @@ package com.faybish.vibealarm.alarm
 
 import android.content.Context
 import android.media.AudioAttributes
+import android.media.AudioDeviceInfo
 import android.media.AudioManager
 import android.media.MediaPlayer
 import android.media.RingtoneManager
 import android.net.Uri
+import android.os.Build
 import androidx.core.net.toUri
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.ReliabilityLogger
@@ -144,7 +146,8 @@ class SoundEngine(
         val current = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
         val plan = AlarmStreamVolume.plan(volume, current, max)
 
-        val raiseTo = plan.raiseStreamTo ?: return plan.playerVolume
+        val raiseTo = plan.raiseStreamTo ?: return exactAttenuation(volume, current, max)
+            ?: plan.playerVolume
         return try {
             savedStreamVolume = current
             // Some OEM volume panels can leave the alarm stream muted, and a muted stream
@@ -165,6 +168,33 @@ class SoundEngine(
             savedStreamVolume = null
             volume.coerceIn(0f, 1f)
         }
+    }
+
+    /**
+     * The attenuation that makes a louder stream sound like the level the user chose, from the
+     * platform's own dB values for the two indices.
+     *
+     * @return null before API 28, or when the device declines to answer — the caller then
+     *   falls back to the ratio of the indices, which is close enough to be better than
+     *   nothing and was the behaviour before this existed.
+     */
+    private fun exactAttenuation(requested: Float, currentIndex: Int, maxIndex: Int): Float? {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return null
+        val wanted = AlarmStreamVolume.wantedIndex(requested, maxIndex)
+        return runCatching {
+            AlarmStreamVolume.attenuationForDb(
+                wantedDb = audioManager.getStreamVolumeDb(
+                    AudioManager.STREAM_ALARM,
+                    wanted,
+                    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
+                ),
+                currentDb = audioManager.getStreamVolumeDb(
+                    AudioManager.STREAM_ALARM,
+                    currentIndex,
+                    AudioDeviceInfo.TYPE_BUILTIN_SPEAKER,
+                ),
+            )
+        }.getOrNull()
     }
 
     fun stop() {

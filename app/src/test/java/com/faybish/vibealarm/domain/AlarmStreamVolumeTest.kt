@@ -65,6 +65,44 @@ class AlarmStreamVolumeTest {
         }
     }
 
+    // --- the exact attenuation ---
+
+    /** Volume indices are dB-spaced, so the correction has to be too. */
+    @Test
+    fun `six decibels down is half the amplitude`() {
+        assertThat(AlarmStreamVolume.attenuationForDb(wantedDb = -6f, currentDb = 0f))
+            .isWithin(0.01f).of(0.5f)
+        assertThat(AlarmStreamVolume.attenuationForDb(wantedDb = -12f, currentDb = 0f))
+            .isWithin(0.01f).of(0.25f)
+        assertThat(AlarmStreamVolume.attenuationForDb(wantedDb = -26f, currentDb = -20f))
+            .isWithin(0.01f).of(0.5f)
+    }
+
+    /** This may only ever turn the alarm down; the stream is the ceiling the phone sets. */
+    @Test
+    fun `it never makes the alarm louder than the stream allows`() {
+        assertThat(AlarmStreamVolume.attenuationForDb(wantedDb = 0f, currentDb = -20f))
+            .isEqualTo(1f)
+        assertThat(AlarmStreamVolume.attenuationForDb(wantedDb = -3f, currentDb = -3f))
+            .isEqualTo(1f)
+    }
+
+    /** Some devices report silence as -infinity for index 0. */
+    @Test
+    fun `a device answering with infinity is ignored rather than trusted`() {
+        assertThat(AlarmStreamVolume.attenuationForDb(Float.NEGATIVE_INFINITY, 0f)).isEqualTo(1f)
+        assertThat(AlarmStreamVolume.attenuationForDb(-6f, Float.NEGATIVE_INFINITY)).isEqualTo(1f)
+        assertThat(AlarmStreamVolume.attenuationForDb(Float.NaN, 0f)).isEqualTo(1f)
+    }
+
+    @Test
+    fun `the wanted index is the chosen fraction of the range, never zero`() {
+        assertThat(AlarmStreamVolume.wantedIndex(1f, 7)).isEqualTo(7)
+        assertThat(AlarmStreamVolume.wantedIndex(0.5f, 10)).isEqualTo(5)
+        assertThat(AlarmStreamVolume.wantedIndex(0f, 7)).isEqualTo(1)
+        assertThat(AlarmStreamVolume.wantedIndex(0.01f, 7)).isEqualTo(1)
+    }
+
     @Test
     fun `a device reporting no volume steps is left alone`() {
         val plan = AlarmStreamVolume.plan(requested = 0.5f, currentIndex = 0, maxIndex = 0)
