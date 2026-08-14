@@ -102,7 +102,10 @@ strength scales everything below it.
 `SoundEngine` plays on `STREAM_ALARM` with `USAGE_ALARM`. Per-alarm volume needs the stream
 to be at least as loud as the level asked for, so the stream is **raised when too quiet and
 never lowered** (`AlarmStreamVolume`) — it is shared with every other alarm clock on the
-phone — and the remaining attenuation is the player's own volume. Sources are a fallback
+phone — and the remaining attenuation is the player's own volume, computed from the platform's
+real dB values for the two indices (`getStreamVolumeDb`, API 28+) because indices are
+dB-spaced while `setVolume` is linear. Either way the alarm comes out at the level the user
+chose, whatever the phone's own volume happens to be. Sources are a fallback
 chain — the chosen ringtone, the system default, then a bundled asset — because before first
 unlock the user's own files are unreadable. The optional ramp steps the player's volume too,
 never the stream.
@@ -194,7 +197,7 @@ opened again, nothing is re-armed. That is why it is presented as a condition, n
 
 ## Tests
 
-309 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
+313 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
 `domain/`; Robolectric tests for the wiring that a unit test cannot see — the real pipeline
 against AlarmManager and Room, the Room migration from a hand-built version-1 file, the
 notification wording in both languages, and that silent mode does not silence the engines.

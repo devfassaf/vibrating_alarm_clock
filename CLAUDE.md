@@ -72,10 +72,14 @@ The one thing added *after* the fact is allowed to be informational: the
     ringtone only; the pattern governs the vibration and plays **once**, never looping to
     fill a long ringtone. The alerting window is the longer of the two (`AlertWindow`), so
     neither can cut the other short.
-13. **The alarm stream may be raised, never lowered.** It is shared with every other alarm
-    clock on the phone (`AlarmStreamVolume`); lowering it to reach a quiet per-alarm volume
-    would play the built-in clock's alarm at our level too. The rest of the distance is the
-    player's own volume.
+13. **The alarm stream may be raised, never lowered, and the chosen loudness is honoured
+    either way.** The stream is shared with every other alarm clock on the phone
+    (`AlarmStreamVolume`): lowering it to reach a quiet per-alarm volume would play the
+    built-in clock's alarm at our level too. Too quiet, and it is raised to the level the
+    user chose; louder than needed, and the player is attenuated instead — by the real dB
+    difference between the two indices (`getStreamVolumeDb`), because volume indices are
+    dB-spaced while `MediaPlayer.setVolume` is linear. Neither the ringer mode nor the
+    phone's own volume may change how loud a configured alarm comes out.
 
 ## Conventions
 
