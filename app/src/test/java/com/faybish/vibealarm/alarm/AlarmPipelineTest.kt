@@ -26,6 +26,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -329,6 +330,45 @@ class AlarmPipelineTest {
         assertThat(postedTitles()).doesNotContain(
             context.getString(R.string.notification_unattended_title),
         )
+    }
+
+    /**
+     * The list screen offers to call off a snooze before it rings. What has to happen then is
+     * exactly what dismissing the ring does: the armed snooze is replaced by the alarm's own
+     * next occurrence, so tomorrow still works.
+     */
+    @Test
+    fun `cancelling a snooze arms the next occurrence instead of the snooze`() = runTest {
+        val alarm = createAlarm(
+            ScheduleCodec.encode(
+                Schedule.Weekly(DayOfWeek.entries.toSet(), LocalTime.of(7, 0)),
+                vibrateOnlyAlarm(snoozeRepeatCount = 3, snoozeIntervalMinutes = 5),
+            ),
+        )
+        val instanceId = repository.activeInstance(alarm.id)!!.id
+
+        val now = Instant.now()
+        runtime.handle(alarm.id, SessionEvent.Fire(now), sink, instanceId)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(now), sink, instanceId)
+        assertThat(repository.activeInstance(alarm.id)!!.state).isEqualTo(InstanceState.SNOOZED)
+        val snoozeTrigger = scheduledAlarms().single().triggerAtTime
+
+        // What the banner's button does.
+        runtime.handle(alarm.id, SessionEvent.UserDismiss(Instant.now()), sink, instanceId)
+
+        val finished = db.instanceDao().getById(instanceId)!!
+        assertThat(finished.state).isEqualTo(InstanceState.DONE)
+        assertThat(finished.endedReason).isEqualTo(EndedReason.USER_DISMISSED)
+
+        val next = repository.activeInstance(alarm.id)!!
+        assertThat(next.id).isNotEqualTo(instanceId)
+        assertThat(scheduledAlarms()).hasSize(1)
+        assertThat(scheduledAlarms().single().triggerAtTime)
+            .isEqualTo(next.nextActionEpochMillis)
+        // Tomorrow, not five minutes from now.
+        assertThat(scheduledAlarms().single().triggerAtTime).isNotEqualTo(snoozeTrigger)
+        // And nothing is left claiming to be waiting on a snooze.
+        assertThat(repository.observeSnoozedInstances().first()).isEmpty()
     }
 
     @Test

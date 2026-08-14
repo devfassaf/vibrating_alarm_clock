@@ -9,6 +9,7 @@ import android.net.Uri
 import androidx.core.net.toUri
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.ReliabilityLogger
+import com.faybish.vibealarm.domain.AlarmStreamVolume
 import com.faybish.vibealarm.domain.VolumeRamp
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -25,9 +26,10 @@ import kotlinx.coroutines.launch
  * Disturb configured for total silence, which the Reliability screen reports.
  *
  * Two more things here are less obvious than they look:
- *  - Per-alarm volume has to move the alarm *stream* volume (saved and restored),
- *    because [MediaPlayer.setVolume] is relative to it — with the stream at zero
- *    the alarm would be silent no matter what we set.
+ *  - Per-alarm volume needs the alarm *stream* to be at least as loud as the level asked
+ *    for, because [MediaPlayer.setVolume] is relative to it. The stream is shared with
+ *    every other alarm clock on the phone, so it is raised when too quiet and never
+ *    lowered; the rest of the distance is covered by the player's own volume.
  *  - The source list is a fallback chain. After a reboot, before the user unlocks,
  *    anything in credential-encrypted storage is unreadable, so we degrade to the
  *    system default and finally to a bundled asset rather than failing silently.
@@ -130,20 +132,21 @@ class SoundEngine(
      * Moves the alarm stream to the per-alarm level, remembering the previous one so
      * [stop] can put it back.
      *
-     * @return the volume the player itself should use: 1.0 when the stream was set
-     *   for us, or the requested fraction when it could not be (total-silence DND
-     *   makes this throw on some builds), since player volume is relative to the
-     *   stream and is the only lever left in that case.
+     * The stream is only ever **raised** — see [AlarmStreamVolume]. Lowering it would turn
+     * down every other alarm clock on the phone for as long as ours plays, which is exactly
+     * what "this app stopped my built-in alarm from working" looks like.
+     *
+     * @return the volume the player itself should use, relative to the stream it ends up on.
      */
     private fun applyStreamVolume(volume: Float): Float {
-        val requested = volume.coerceIn(0f, 1f)
         if (savedStreamVolume != null) return 1f
         val max = audioManager.getStreamMaxVolume(AudioManager.STREAM_ALARM)
-        // Never zero, even at the bottom of the slider: an alarm the user asked to hear
-        // must make a sound.
-        val target = (requested * max).toInt().coerceIn(1, max)
+        val current = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+        val plan = AlarmStreamVolume.plan(volume, current, max)
+
+        val raiseTo = plan.raiseStreamTo ?: return plan.playerVolume
         return try {
-            savedStreamVolume = audioManager.getStreamVolume(AudioManager.STREAM_ALARM)
+            savedStreamVolume = current
             // Some OEM volume panels can leave the alarm stream muted, and a muted stream
             // ignores the level we set. Unmuting is best-effort: it is refused under a
             // total-silence policy, where the fallback below is all that is left.
@@ -156,11 +159,11 @@ class SoundEngine(
                     )
                 }
             }
-            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, target, 0)
-            1f
+            audioManager.setStreamVolume(AudioManager.STREAM_ALARM, raiseTo, 0)
+            plan.playerVolume
         } catch (e: SecurityException) {
             savedStreamVolume = null
-            requested
+            volume.coerceIn(0f, 1f)
         }
     }
 

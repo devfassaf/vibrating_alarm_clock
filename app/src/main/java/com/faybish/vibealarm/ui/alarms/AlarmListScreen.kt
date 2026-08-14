@@ -32,6 +32,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -72,10 +73,15 @@ fun AlarmListScreen(
 ) {
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val patternNames by viewModel.patternNames.collectAsStateWithLifecycle()
+    val snoozed by viewModel.snoozed.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val dirty by viewModel.draftDirty.collectAsStateWithLifecycle()
 
-    var expandedId by remember { mutableStateOf<Long?>(null) }
+    // Saveable, not just remembered: picking a pattern navigates away, and a plain
+    // remember is gone by the time the user comes back — they returned to a collapsed
+    // list and had to find their alarm again. The draft itself lives in the view model,
+    // so restoring which card was open restores the whole editing session.
+    var expandedId by rememberSaveable { mutableStateOf<Long?>(null) }
     var showTimePicker by remember { mutableStateOf(false) }
 
     // What to do once the unsaved-changes question has been answered.
@@ -170,6 +176,21 @@ fun AlarmListScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
+            // First, above everything: a snooze that is about to ring again is the most
+            // time-critical thing on this screen.
+            items(snoozed, key = { "snoozed-${it.instanceId}" }) { ring ->
+                SnoozedBanner(
+                    label = ring.label,
+                    ringsAt = ring.ringsAt,
+                    remainingSnoozes = ring.remainingSnoozes,
+                    onCancel = {
+                        viewModel.cancelSnooze(ring) { alarm, trigger ->
+                            announce(alarm, trigger)
+                        }
+                    },
+                )
+            }
+
             item { ReliabilityBanner(onOpenReliability = onOpenReliability) }
 
             if (alarms.isEmpty()) {

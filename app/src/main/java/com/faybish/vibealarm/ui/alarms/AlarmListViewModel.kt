@@ -7,11 +7,14 @@ import com.faybish.vibealarm.alarm.AlarmServiceStarter
 import com.faybish.vibealarm.alarm.PreviewEngine
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.ScheduleCodec
+import com.faybish.vibealarm.data.SnoozedRing
+import com.faybish.vibealarm.data.snoozedRings
 import com.faybish.vibealarm.data.VibrationPatternEntity
 import com.faybish.vibealarm.data.hasSameEditsAs
 import com.faybish.vibealarm.data.withEditsFrom
 import com.faybish.vibealarm.domain.NextOccurrenceCalculator
 import com.faybish.vibealarm.domain.Schedule
+import com.faybish.vibealarm.domain.SessionEvent
 import java.time.Instant
 import java.time.LocalTime
 import java.time.ZoneId
@@ -58,6 +61,15 @@ class AlarmListViewModel : ViewModel() {
     val patternNames: StateFlow<Map<Long, String>> = repository.observePatterns()
         .map { list -> list.associate { it.id to it.name } }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyMap())
+
+    /**
+     * Chains waiting to ring again, offered on the list screen so the next ring can be called
+     * off now instead of being waited for — which on a morning you are already up for means
+     * being woken a second time by an alarm you had finished with.
+     */
+    val snoozed: StateFlow<List<SnoozedRing>> =
+        combine(repository.observeSnoozedInstances(), repository.observeAlarms(), ::snoozedRings)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _draft = MutableStateFlow<AlarmEntity?>(null)
 
@@ -191,6 +203,28 @@ class AlarmListViewModel : ViewModel() {
             scheduler.onAlarmToggled(alarmId, enabled)
             val fresh = repository.getAlarm(alarmId) ?: return@launch
             onToggled(fresh, nextTrigger(fresh))
+        }
+    }
+
+    /**
+     * Ends a chain that is waiting on a snooze, exactly as dismissing the ring would: the
+     * armed snooze is replaced by this alarm's next real occurrence (or the alarm switches
+     * itself off, if it was a one-time one).
+     */
+    fun cancelSnooze(
+        ring: SnoozedRing,
+        onCancelled: (AlarmEntity, Instant?) -> Unit = { _, _ -> },
+    ) {
+        viewModelScope.launch {
+            val runtime = AppGraph.sessionRuntime
+            runtime.handle(
+                alarmId = ring.alarmId,
+                event = SessionEvent.UserDismiss(Instant.now()),
+                sink = runtime.ServiceControlSink(),
+                instanceIdHint = ring.instanceId,
+            )
+            val fresh = repository.getAlarm(ring.alarmId) ?: return@launch
+            onCancelled(fresh, nextTrigger(fresh))
         }
     }
 

@@ -68,6 +68,15 @@ The one thing added *after* the fact is allowed to be informational: the
     point the button at `projectUrl()` (the repository, which always renders the README)
     rather than shipping a button that 404s.
 
+12. **Sound length and vibration length are separate.** The ring duration governs the
+    ringtone only; the pattern governs the vibration and plays **once**, never looping to
+    fill a long ringtone. The alerting window is the longer of the two (`AlertWindow`), so
+    neither can cut the other short.
+13. **The alarm stream may be raised, never lowered.** It is shared with every other alarm
+    clock on the phone (`AlarmStreamVolume`); lowering it to reach a quiet per-alarm volume
+    would play the built-in clock's alarm at our level too. The rest of the distance is the
+    player's own volume.
+
 ## Conventions
 
 - **Strings**: `values/` (English) and `values-iw/` (Hebrew) must stay at exact parity, with
