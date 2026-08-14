@@ -127,7 +127,7 @@ Three channels, none of which carries a sound or a vibration of its own:
 | --- | --- | --- |
 | `alarm_alerting` | a ringing alarm that should light the screen (full-screen intent) | HIGH |
 | `alarm_silent` | a ringing alarm in screen-stays-dark mode | LOW |
-| `alarm_status` | snoozed, missed, and "rang but never dismissed" notices | DEFAULT |
+| `alarm_status` | snoozed, "missed alarm at 07:30", and never-rang notices | DEFAULT |
 
 Notification ids are per-alarm (`base + alarmId`) so one alarm's notice can never take
 another's slot: firing `100000+`, snoozed `200000+`, missed `300000+`, unattended `400000+`.
@@ -197,7 +197,7 @@ opened again, nothing is re-armed. That is why it is presented as a condition, n
 
 ## Tests
 
-313 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
+351 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
 `domain/`; Robolectric tests for the wiring that a unit test cannot see — the real pipeline
 against AlarmManager and Room, the Room migration from a hand-built version-1 file, the
 notification wording in both languages, and that silent mode does not silence the engines.

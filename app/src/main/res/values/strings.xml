@@ -190,7 +190,7 @@
     <string name="notification_snoozed_until">Snoozed until %1$s</string>
     <string name="notification_missed_title">Missed alarm</string>
     <string name="notification_missed_text">%1$s was due at %2$s</string>
-    <string name="notification_unattended_title">Alarm rang and was never dismissed</string>
+    <string name="notification_unattended_title">Missed alarm at %1$s</string>
 
     <!-- Vibration presets -->
     <string name="pattern_preset_gentle">Gentle</string>
@@ -232,8 +232,8 @@
         <item quantity="other">%1$d snoozes left</item>
     </plurals>
     <plurals name="notification_unattended_text">
-        <item quantity="one">%1$s · rang once at %2$s</item>
-        <item quantity="other">%1$s · rang %4$d times, %2$s to %3$s</item>
+        <item quantity="one">%1$s · rang once and was never dismissed</item>
+        <item quantity="other">%1$s · rang %4$d times until %3$s, never dismissed</item>
     </plurals>
     <plurals name="notification_snoozed_until_remaining">
         <item quantity="one">Snoozed until %1$s · %2$d left</item>

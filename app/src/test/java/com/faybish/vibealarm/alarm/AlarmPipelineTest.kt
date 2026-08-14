@@ -22,6 +22,7 @@ import com.faybish.vibealarm.domain.SessionEvent
 import com.google.common.truth.Truth.assertThat
 import java.time.DayOfWeek
 import java.time.Instant
+import java.time.LocalDate
 import java.time.LocalTime
 import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
@@ -119,8 +120,11 @@ class AlarmPipelineTest {
         shadowOf(context.getSystemService(NotificationManager::class.java))
             .allNotifications
             .firstOrNull {
-                it.extras.getString(Notification.EXTRA_TITLE) ==
-                    context.getString(R.string.notification_unattended_title)
+                // The title now carries the time, so match on the part that identifies it.
+                val title = it.extras.getString(Notification.EXTRA_TITLE).orEmpty()
+                title.startsWith(
+                    context.getString(R.string.notification_unattended_title, "").trim(),
+                )
             }
 
     private suspend fun createAlarm(alarm: AlarmEntity): AlarmEntity {
@@ -327,9 +331,7 @@ class AlarmPipelineTest {
         runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, nextInstance)
 
         assertThat(unattendedNotice()).isNull()
-        assertThat(postedTitles()).doesNotContain(
-            context.getString(R.string.notification_unattended_title),
-        )
+        assertThat(unattendedNotice()).isNull()
     }
 
     /**
@@ -398,6 +400,46 @@ class AlarmPipelineTest {
         // The default schedule is one-time, so there is nothing left to arm.
         assertThat(repository.getAlarm(alarm.id)!!.enabled).isFalse()
         assertThat(scheduledAlarms()).isEmpty()
+    }
+
+    /**
+     * A date list is the one schedule that runs out. Dates that have gone by are dropped as
+     * they pass, so the alarm eventually reports "nothing left" and switches itself off
+     * instead of re-evaluating the same past dates forever.
+     */
+    @Test
+    fun `a date list drops dates as they pass and arms the next one`() = runTest {
+        val today = LocalDate.now(zone)
+        val alarm = createAlarm(
+            ScheduleCodec.encode(
+                Schedule.Dates(
+                    dates = listOf(today.minusDays(3), today.plusDays(2)),
+                    time = LocalTime.of(7, 0),
+                ),
+                vibrateOnlyAlarm(),
+            ),
+        )
+
+        val stored = repository.getAlarm(alarm.id)!!
+        val remaining = (repository.scheduleOf(stored) as Schedule.Dates).dates
+        assertThat(remaining).containsExactly(today.plusDays(2))
+        assertThat(stored.enabled).isTrue()
+        assertThat(scheduledAlarms()).hasSize(1)
+    }
+
+    @Test
+    fun `a date list with nothing left switches the alarm off`() = runTest {
+        val today = LocalDate.now(zone)
+        val alarm = createAlarm(
+            ScheduleCodec.encode(
+                Schedule.Dates(dates = listOf(today.minusDays(5)), time = LocalTime.of(7, 0)),
+                vibrateOnlyAlarm(),
+            ),
+        )
+
+        assertThat(repository.getAlarm(alarm.id)!!.enabled).isFalse()
+        assertThat(scheduledAlarms()).isEmpty()
+        assertThat(repository.activeInstance(alarm.id)).isNull()
     }
 
     @Test
