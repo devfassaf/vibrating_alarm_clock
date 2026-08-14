@@ -83,31 +83,31 @@ class AlarmNotificationsTest {
     fun `Hebrew says it rang, how many times, and between which hours`() {
         val notification = postUnattended("iw", ringCount = 3)
 
-        assertThat(notification.title()).isEqualTo("ההשכמה פעלה ולא כובתה")
-        assertThat(notification.text()).isEqualTo("שבת · פעלה 3 פעמים, בין 7:30 ל-7:40")
+        assertThat(notification.title()).isEqualTo("החמצת השכמה ב-7:30")
+        assertThat(notification.text()).isEqualTo("שבת · פעלה 3 פעמים, עד 7:40, ולא כובתה")
     }
 
     @Test
     fun `English says the same`() {
         val notification = postUnattended("en", ringCount = 3)
 
-        assertThat(notification.title()).isEqualTo("Alarm rang and was never dismissed")
-        assertThat(notification.text()).isEqualTo("שבת · rang 3 times, 7:30 to 7:40")
+        assertThat(notification.title()).isEqualTo("Missed alarm at 7:30")
+        assertThat(notification.text()).isEqualTo("שבת · rang 3 times until 7:40, never dismissed")
     }
 
     /** One ring has no range to give — "between 7:30 and 7:30" would read as a fault. */
     @Test
     fun `a single ring names one time`() {
         assertThat(postUnattended("iw", ringCount = 1, endedAt = "2026-08-15T07:30:12").text())
-            .isEqualTo("שבת · פעלה פעם אחת ב-7:30")
+            .isEqualTo("שבת · פעלה פעם אחת ולא כובתה")
         assertThat(postUnattended("en", ringCount = 1, endedAt = "2026-08-15T07:30:12").text())
-            .isEqualTo("שבת · rang once at 7:30")
+            .isEqualTo("שבת · rang once and was never dismissed")
     }
 
     @Test
     fun `Hebrew inflects two rings`() {
         assertThat(postUnattended("iw", ringCount = 2).text())
-            .isEqualTo("שבת · פעלה פעמיים, בין 7:30 ל-7:40")
+            .isEqualTo("שבת · פעלה פעמיים, עד 7:40, ולא כובתה")
     }
 
     @Test
@@ -144,7 +144,7 @@ class AlarmNotificationsTest {
         assertThat(posted).hasSize(2)
         assertThat(posted.map { it.title() }).containsNoDuplicates()
         assertThat(posted.map { it.title() }).contains("השכמה הוחמצה")
-        assertThat(posted.map { it.title() }).contains("ההשכמה פעלה ולא כובתה")
+        assertThat(posted.map { it.title() }).contains("החמצת השכמה ב-7:30")
     }
 
     /** It lands at the end of the chain, while the rest of the room is still asleep. */

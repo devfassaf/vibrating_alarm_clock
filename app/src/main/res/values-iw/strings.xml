@@ -192,7 +192,7 @@
     <string name="notification_snoozed_until">נודניק עד %1$s</string>
     <string name="notification_missed_title">השכמה הוחמצה</string>
     <string name="notification_missed_text">%1$s הייתה מיועדת ל-%2$s</string>
-    <string name="notification_unattended_title">ההשכמה פעלה ולא כובתה</string>
+    <string name="notification_unattended_title">החמצת השכמה ב-%1$s</string>
 
     <!-- Vibration presets -->
     <string name="pattern_preset_gentle">עדינה</string>
@@ -242,9 +242,9 @@
         <item quantity="other">נשארו %1$d נודניקים</item>
     </plurals>
     <plurals name="notification_unattended_text">
-        <item quantity="one">%1$s · פעלה פעם אחת ב-%2$s</item>
-        <item quantity="two">%1$s · פעלה פעמיים, בין %2$s ל-%3$s</item>
-        <item quantity="other">%1$s · פעלה %4$d פעמים, בין %2$s ל-%3$s</item>
+        <item quantity="one">%1$s · פעלה פעם אחת ולא כובתה</item>
+        <item quantity="two">%1$s · פעלה פעמיים, עד %3$s, ולא כובתה</item>
+        <item quantity="other">%1$s · פעלה %4$d פעמים, עד %3$s, ולא כובתה</item>
     </plurals>
     <plurals name="notification_snoozed_until_remaining">
         <item quantity="one">נודניק עד %1$s · נשאר אחד</item>

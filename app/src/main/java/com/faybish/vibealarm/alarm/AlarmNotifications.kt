@@ -176,8 +176,12 @@ class AlarmNotifications(private val context: Context) {
      * vibration, because it lands at the end of the ring chain, when whoever else is in
      * the room is still asleep.
      *
-     * @param ringCount rings including the first, so "rang 3 times" also answers whether
-     *   the pattern was simply too gentle to wake up to.
+     * The title leads with the miss and the time — "you missed an alarm at 07:30" — because
+     * that is the sentence someone reads half awake and needs no second thought about. The
+     * detail line carries how many times it tried, which is the part that answers whether the
+     * pattern was simply too gentle to wake up to.
+     *
+     * @param ringCount rings including the first.
      */
     fun showUnattended(alarm: AlarmEntity, firstRingAt: Instant, endedAt: Instant, ringCount: Int) {
         val text = context.resources.getQuantityString(
@@ -190,7 +194,12 @@ class AlarmNotifications(private val context: Context) {
         )
         val notification = Notification.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(R.drawable.ic_alarm_notification)
-            .setContentTitle(context.getString(R.string.notification_unattended_title))
+            .setContentTitle(
+                context.getString(
+                    R.string.notification_unattended_title,
+                    firstRingAt.asClockTime(),
+                ),
+            )
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setWhen(endedAt.toEpochMilli())
