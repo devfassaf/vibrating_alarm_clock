@@ -144,8 +144,11 @@ class SessionRuntime(
                 // tonight's alarm as if it were about this one — and neither must the
                 // "snoozed until 07:35" notice from the ring this one is the sequel to,
                 // which otherwise sits in the shade with the same title as the live alarm.
-                notifications.cancelUnattended(alarm.id)
+                // The row is marked read in the same breath, or the banner would outlive
+                // the notification and go on describing a morning two rings ago.
+                notifications.cancelNotices(alarm.id)
                 notifications.cancelSnoozed(alarm.id)
+                repository.acknowledgeNoticesFor(alarm.id)
                 sink.showFiring(alarm, entity.id)
             }
 
@@ -269,6 +272,7 @@ internal fun AlarmInstanceEntity.toState() = SessionState(
         EndedReason.PREEMPTED -> EndReason.PREEMPTED
         else -> null
     },
+    endedAt = endedAt?.let(Instant::ofEpochMilli),
 )
 
 internal fun AlarmInstanceEntity.applying(state: SessionState) = copy(
@@ -288,6 +292,7 @@ internal fun AlarmInstanceEntity.applying(state: SessionState) = copy(
         EndReason.PREEMPTED -> EndedReason.PREEMPTED
         null -> endedReason
     },
+    endedAt = state.endedAt?.toEpochMilli() ?: endedAt,
 )
 
 private fun EndReason.logEvent(): String = when (this) {

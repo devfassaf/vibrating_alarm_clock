@@ -8,6 +8,8 @@ import com.faybish.vibealarm.alarm.PreviewEngine
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.ScheduleCodec
 import com.faybish.vibealarm.data.SnoozedRing
+import com.faybish.vibealarm.data.MissedNotice
+import com.faybish.vibealarm.data.missedNotices
 import com.faybish.vibealarm.data.snoozedRings
 import com.faybish.vibealarm.data.VibrationPatternEntity
 import com.faybish.vibealarm.data.hasSameEditsAs
@@ -69,6 +71,11 @@ class AlarmListViewModel : ViewModel() {
      */
     val snoozed: StateFlow<List<SnoozedRing>> =
         combine(repository.observeSnoozedInstances(), repository.observeAlarms(), ::snoozedRings)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Mornings that went wrong and have not been read yet — the red dot, explained. */
+    val notices: StateFlow<List<MissedNotice>> =
+        combine(repository.observeUnreadNotices(), repository.observeAlarms(), ::missedNotices)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _draft = MutableStateFlow<AlarmEntity?>(null)
@@ -211,6 +218,19 @@ class AlarmListViewModel : ViewModel() {
      * armed snooze is replaced by this alarm's next real occurrence (or the alarm switches
      * itself off, if it was a one-time one).
      */
+    /**
+     * Marks a notice read: the banner goes, and so does the notification behind it — which
+     * is the only thing that clears the red dot on the launcher icon. One button, both,
+     * because a user who has read the sentence has no way of knowing they left a second
+     * copy of it somewhere else.
+     */
+    fun acknowledgeNotice(notice: MissedNotice) {
+        viewModelScope.launch {
+            repository.acknowledgeNotice(notice.instanceId)
+            AppGraph.notifications.cancelNotices(notice.alarmId)
+        }
+    }
+
     fun cancelSnooze(
         ring: SnoozedRing,
         onCancelled: (AlarmEntity, Instant?) -> Unit = { _, _ -> },
@@ -242,9 +262,13 @@ class AlarmListViewModel : ViewModel() {
      * service would keep playing to the end of its window — up to half an hour for a
      * ringtone — for an alarm the user has just turned off or thrown away.
      */
-    private fun silenceIfRinging(alarmId: Long) {
+    private suspend fun silenceIfRinging(alarmId: Long) {
         AlarmServiceStarter.stop(AppGraph.deviceProtectedContext, alarmId)
         AppGraph.notifications.cancelForAlarm(alarmId)
+        // That call takes the morning-after notices with it, so the rows behind them have
+        // to go too: a banner left describing an alarm the user has just switched off is a
+        // second copy of a message whose notification no longer exists.
+        repository.acknowledgeNoticesFor(alarmId)
     }
 
     /** Feels the alarm's own pattern at the currently chosen intensity. */

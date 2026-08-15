@@ -14,6 +14,7 @@
     <!-- Generic actions -->
     <string name="action_ok">אישור</string>
     <string name="action_cancel">ביטול</string>
+    <string name="action_got_it">הבנתי</string>
     <string name="action_cancel_snooze">ביטול הנודניק</string>
     <string name="action_save">שמירה</string>
     <string name="action_delete">מחיקה</string>

@@ -74,6 +74,7 @@ fun AlarmListScreen(
     val alarms by viewModel.alarms.collectAsStateWithLifecycle()
     val patternNames by viewModel.patternNames.collectAsStateWithLifecycle()
     val snoozed by viewModel.snoozed.collectAsStateWithLifecycle()
+    val notices by viewModel.notices.collectAsStateWithLifecycle()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val dirty by viewModel.draftDirty.collectAsStateWithLifecycle()
 
@@ -178,6 +179,16 @@ fun AlarmListScreen(
         ) {
             // First, above everything: a snooze that is about to ring again is the most
             // time-critical thing on this screen.
+            // Above the snooze banners: a morning that already went wrong outranks one
+            // that is still coming, and this is the answer to the red dot that brought
+            // the user here in the first place.
+            items(notices, key = { "notice-${it.instanceId}" }) { notice ->
+                MissedNoticeBanner(
+                    notice = notice,
+                    onAcknowledge = { viewModel.acknowledgeNotice(notice) },
+                )
+            }
+
             items(snoozed, key = { "snoozed-${it.instanceId}" }) { ring ->
                 SnoozedBanner(
                     label = ring.label,

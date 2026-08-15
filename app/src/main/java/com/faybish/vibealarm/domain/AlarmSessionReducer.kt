@@ -23,9 +23,9 @@ object AlarmSessionReducer {
             is SessionEvent.Fire -> fire(state)
             is SessionEvent.PlaybackComplete -> playbackComplete(state, config, event.now)
             is SessionEvent.UserSnooze -> userSnooze(state, config, event.now)
-            is SessionEvent.UserDismiss -> userDismiss(state)
+            is SessionEvent.UserDismiss -> userDismiss(state, event.now)
             is SessionEvent.Resume -> resume(state, config, event.now)
-            is SessionEvent.Preempted -> preempted(state)
+            is SessionEvent.Preempted -> preempted(state, event.now)
         }
     }
 
@@ -52,7 +52,7 @@ object AlarmSessionReducer {
         // The chain is over and the user never dismissed it — whether they slept through
         // every ring or snoozed a few by hand, they did not switch it off. Report it after
         // CancelNotifications, which would otherwise wipe the notice it posts.
-        val (next, effects) = finish(state, EndReason.AUTO_DISMISSED)
+        val (next, effects) = finish(state, EndReason.AUTO_DISMISSED, now)
         return next to effects + SessionEffect.ReportUnattended(
             firstRingAt = state.occurrence,
             endedAt = now,
@@ -90,19 +90,25 @@ object AlarmSessionReducer {
         )
     }
 
-    private fun userDismiss(state: SessionState): Pair<SessionState, List<SessionEffect>> =
-        finish(state, EndReason.USER_DISMISSED)
+    private fun userDismiss(
+        state: SessionState,
+        now: Instant,
+    ): Pair<SessionState, List<SessionEffect>> = finish(state, EndReason.USER_DISMISSED, now)
 
-    private fun preempted(state: SessionState): Pair<SessionState, List<SessionEffect>> {
-        val (next, effects) = finish(state, EndReason.PREEMPTED)
+    private fun preempted(
+        state: SessionState,
+        now: Instant,
+    ): Pair<SessionState, List<SessionEffect>> {
+        val (next, effects) = finish(state, EndReason.PREEMPTED, now)
         return next to effects + SessionEffect.ReportMissed(state.occurrence)
     }
 
     private fun finish(
         state: SessionState,
         reason: EndReason,
+        now: Instant,
     ): Pair<SessionState, List<SessionEffect>> {
-        val next = state.copy(phase = SessionPhase.DONE, endedReason = reason)
+        val next = state.copy(phase = SessionPhase.DONE, endedReason = reason, endedAt = now)
         return next to listOf(
             SessionEffect.StopOutputs,
             SessionEffect.Persist(next),
@@ -139,7 +145,11 @@ object AlarmSessionReducer {
 
                     state.phase == SessionPhase.SCHEDULED &&
                         trigger.plus(config.missedWindow).isBefore(now) -> {
-                        val next = state.copy(phase = SessionPhase.DONE, endedReason = EndReason.MISSED)
+                        val next = state.copy(
+                            phase = SessionPhase.DONE,
+                            endedReason = EndReason.MISSED,
+                            endedAt = now,
+                        )
                         next to listOf(
                             SessionEffect.Persist(next),
                             SessionEffect.ReportMissed(state.occurrence),

@@ -20,6 +20,8 @@ data class SessionState(
     /** The trigger currently armed with AlarmManager (occurrence or snooze-until). */
     val nextActionAt: Instant,
     val endedReason: EndReason? = null,
+    /** Set together with [endedReason]; the "until 07:40" the morning-after notice quotes. */
+    val endedAt: Instant? = null,
 )
 
 /** Per-alarm snooze behavior + fixed runtime policies. */

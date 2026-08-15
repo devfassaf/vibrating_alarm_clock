@@ -91,6 +91,12 @@ object EndedReason {
     const val USER_DISMISSED = 1
     const val MISSED = 2
     const val PREEMPTED = 3
+
+    /**
+     * The endings the user is told about the next morning. USER_DISMISSED is absent on
+     * purpose: they were there, they switched it off, and there is nothing to report.
+     */
+    val NOTICE_WORTHY = listOf(AUTO_DISMISSED, MISSED, PREEMPTED)
 }
 
 /**
@@ -119,6 +125,14 @@ data class AlarmInstanceEntity(
     val nextActionEpochMillis: Long,
     val firedAt: Long? = null,
     val endedReason: Int? = null,
+    /** When the chain actually stopped — the "until 07:40" in the morning-after notice. */
+    val endedAt: Long? = null,
+    /**
+     * When the user acknowledged the notice this row produced, or null while it is still
+     * waiting to be read. Persisted rather than kept in memory because the whole point of
+     * the notice is to survive the night, the reboot, and the app being swiped away.
+     */
+    val noticeAckAt: Long? = null,
 )
 
 @Entity(tableName = "reliability_log")

@@ -14,6 +14,9 @@ import com.faybish.vibealarm.data.AlarmRepository
 import com.faybish.vibealarm.data.AppDb
 import com.faybish.vibealarm.data.EndedReason
 import com.faybish.vibealarm.data.InstanceState
+import com.faybish.vibealarm.data.MissedNotice
+import com.faybish.vibealarm.data.NoticeKind
+import com.faybish.vibealarm.data.missedNotices
 import com.faybish.vibealarm.data.ReliabilityLogger
 import com.faybish.vibealarm.data.RingMode
 import com.faybish.vibealarm.data.ScheduleCodec
@@ -126,6 +129,9 @@ class AlarmPipelineTest {
                     context.getString(R.string.notification_unattended_title, "").trim(),
                 )
             }
+
+    private suspend fun unreadNotices(): List<MissedNotice> =
+        missedNotices(repository.unreadNotices(), repository.getAllAlarms())
 
     private suspend fun createAlarm(alarm: AlarmEntity): AlarmEntity {
         val id = repository.saveAlarm(alarm)
@@ -295,6 +301,63 @@ class AlarmPipelineTest {
         val notice = unattendedNotice()
         assertThat(notice).isNotNull()
         assertThat(notice!!.extras.getString(Notification.EXTRA_TEXT)).contains("2")
+
+        // And the row behind it: what the banner reads, and what keeps the launcher's red
+        // dot meaningful. Without the stored end time the banner cannot say "until 07:40".
+        val row = db.instanceDao().getById(instanceId)!!
+        assertThat(row.endedAt).isNotNull()
+        assertThat(row.endedAt!!).isAtLeast(row.firedAt!!)
+        assertThat(row.noticeAckAt).isNull()
+
+        val unread = unreadNotices()
+        assertThat(unread.map { it.instanceId }).containsExactly(instanceId)
+        assertThat(unread.single().kind).isEqualTo(NoticeKind.UNATTENDED)
+        assertThat(unread.single().ringCount).isEqualTo(2)
+    }
+
+    /**
+     * The banner and the notification are two faces of one row, so retiring one without the
+     * other leaves the user with either a dot nothing explains or a banner about a morning
+     * two rings ago.
+     */
+    @Test
+    fun `the next ring marks the earlier notice read, banner and notification together`() =
+        runTest {
+            val alarm = createAlarm(
+                ScheduleCodec.encode(
+                    Schedule.Weekly(DayOfWeek.entries.toSet(), LocalTime.of(7, 0)),
+                    vibrateOnlyAlarm(snoozeRepeatCount = 0),
+                ),
+            )
+            val firstInstance = repository.activeInstance(alarm.id)!!.id
+
+            runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, firstInstance)
+            runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, firstInstance)
+            assertThat(unreadNotices()).hasSize(1)
+
+            val nextInstance = repository.activeInstance(alarm.id)!!.id
+            runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, nextInstance)
+
+            assertThat(db.instanceDao().getById(firstInstance)!!.noticeAckAt).isNotNull()
+            assertThat(unreadNotices()).isEmpty()
+            assertThat(unattendedNotice()).isNull()
+        }
+
+    /** The one button the user has: it must clear the row, not just the banner on screen. */
+    @Test
+    fun `acknowledging a notice clears the row it came from`() = runTest {
+        val alarm = createAlarm(vibrateOnlyAlarm(snoozeRepeatCount = 0))
+        val instanceId = repository.activeInstance(alarm.id)!!.id
+
+        runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, instanceId)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, instanceId)
+        assertThat(unreadNotices()).hasSize(1)
+
+        repository.acknowledgeNotice(instanceId)
+
+        assertThat(unreadNotices()).isEmpty()
+        assertThat(db.instanceDao().getById(instanceId)!!.endedReason)
+            .isEqualTo(EndedReason.AUTO_DISMISSED)
     }
 
     @Test

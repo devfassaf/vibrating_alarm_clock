@@ -81,6 +81,17 @@ The one thing added *after* the fact is allowed to be informational: the
     dB-spaced while `MediaPlayer.setVolume` is linear. Neither the ringer mode nor the
     phone's own volume may change how loud a configured alarm comes out.
 
+14. **A notice the user cannot clear from inside the app is a red dot with no explanation.**
+    The morning-after notices (`showUnattended`, `showMissed`) put a badge on the launcher
+    icon, and Samsung shows the notification itself as a two-second pill — so the app has to
+    say the same thing in a place that waits. The banner and the notification are two faces
+    of one `instances` row (`endedReason` + `noticeAckAt`): they are built from the same
+    `NoticeText`, and whatever retires one retires the other. Opening the app clears
+    nothing; only "הבנתי" does, plus the alarm ringing again.
+    **`acknowledgeNoticesFor` must never touch a live chain** — it runs from inside a ring,
+    and without the `state = 3` filter the ringing chain marks its own row read before it
+    has anything to report, so the notice it goes on to create is invisible from birth.
+
 ## Conventions
 
 - **Strings**: `values/` (English) and `values-iw/` (Hebrew) must stay at exact parity, with

@@ -172,7 +172,25 @@ class AlarmNotificationsTest {
         )
         assertThat(shadowOf(manager()).allNotifications).hasSize(1)
 
-        notifications.cancelUnattended(alarm.id)
+        notifications.cancelNotices(alarm.id)
+        assertThat(shadowOf(manager()).allNotifications).isEmpty()
+    }
+
+    /**
+     * The "it never rang" notice used to be the one thing nothing ever cancelled: not the
+     * alarm ringing again, not switching the alarm off, not the chain ending. It sat in the
+     * shade with a red dot on the launcher icon behind it, describing a morning from weeks
+     * ago, and the only way out was to find and swipe it.
+     */
+    @Test
+    fun `the never-rang notice is cleared along with the rest`() {
+        val notifications = AlarmNotifications(localized("iw"))
+        notifications.ensureChannels()
+        notifications.showMissed(alarm, at("2026-08-15T07:30:00"))
+        assertThat(shadowOf(manager()).allNotifications).hasSize(1)
+
+        notifications.cancelForAlarm(alarm.id)
+
         assertThat(shadowOf(manager()).allNotifications).isEmpty()
     }
 
