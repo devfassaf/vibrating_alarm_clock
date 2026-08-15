@@ -71,6 +71,39 @@ interface InstanceDao {
     @Query("SELECT * FROM instances WHERE id = :id")
     suspend fun getById(id: Long): AlarmInstanceEntity?
 
+    /**
+     * Chains that ended in a way the user should hear about and has not acknowledged yet.
+     * Watched by the list screen, so the launcher's red dot always has something inside
+     * the app that explains it.
+     */
+    @Query(
+        "SELECT * FROM instances WHERE state = 3 AND noticeAckAt IS NULL " +
+            "AND endedReason IN (:reasons) ORDER BY occurrenceEpochMillis DESC",
+    )
+    fun observeUnreadNotices(reasons: List<Int>): Flow<List<AlarmInstanceEntity>>
+
+    @Query(
+        "SELECT * FROM instances WHERE state = 3 AND noticeAckAt IS NULL " +
+            "AND endedReason IN (:reasons) ORDER BY occurrenceEpochMillis DESC",
+    )
+    suspend fun unreadNotices(reasons: List<Int>): List<AlarmInstanceEntity>
+
+    @Query("UPDATE instances SET noticeAckAt = :at WHERE id = :id")
+    suspend fun acknowledgeNotice(id: Long, at: Long)
+
+    /**
+     * Used when the alarm rings again: last night's notice is no longer the news.
+     *
+     * Restricted to chains that have already ended, because this runs from inside a ring —
+     * without it the live chain stamps its own row read before it has anything to report,
+     * and the notice it goes on to produce is invisible from the moment it is created.
+     */
+    @Query(
+        "UPDATE instances SET noticeAckAt = :at " +
+            "WHERE alarmId = :alarmId AND noticeAckAt IS NULL AND state = 3",
+    )
+    suspend fun acknowledgeNoticesFor(alarmId: Long, at: Long)
+
     @Upsert
     suspend fun upsert(instance: AlarmInstanceEntity): Long
 

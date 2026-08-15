@@ -14,6 +14,7 @@
     <!-- Generic actions -->
     <string name="action_ok">OK</string>
     <string name="action_cancel">Cancel</string>
+    <string name="action_got_it">Got it</string>
     <string name="action_cancel_snooze">Cancel snooze</string>
     <string name="action_save">Save</string>
     <string name="action_delete">Delete</string>

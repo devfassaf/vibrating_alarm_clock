@@ -70,6 +70,10 @@ class AppDbMigrationTest {
                 "autoSilenceSeconds, snoozeIntervalMinutes, snoozeRepeatCount, backgroundType, " +
                 "backgroundColorArgb, createdAt, updatedAt) VALUES " +
                 "(7, 'שבת', 1, 1, 450, 32, 1, 0.8, 1, 0.6, 0, 60, 3, 2, 0, -1, 100, 200)",
+            // A chain that rang twice and ended by itself — the morning before the update.
+            "INSERT INTO instances (id, alarmId, occurrenceEpochMillis, state, snoozesUsed, " +
+                "nextActionEpochMillis, firedAt, endedReason) VALUES " +
+                "(3, 7, 1000, 3, 1, 2000, 1000, 0)",
         ).forEach(db::execSQL)
         db.version = 1
         db.close()
@@ -78,7 +82,9 @@ class AppDbMigrationTest {
     private fun openCurrent(withMigration: Boolean = true): AppDb =
         Room.databaseBuilder(context, AppDb::class.java, DB_NAME)
             .allowMainThreadQueries()
-            .apply { if (withMigration) addMigrations(AppDb.MIGRATION_1_2) }
+            .apply {
+                if (withMigration) addMigrations(AppDb.MIGRATION_1_2, AppDb.MIGRATION_2_3)
+            }
             .build()
 
     @Test
@@ -126,6 +132,39 @@ class AppDbMigrationTest {
 
         assertThat(saved!!.soundRampUp).isTrue()
         assertThat(saved.autoSilenceSeconds).isEqualTo(45)
+    }
+
+    /**
+     * The notice is the app's only account of a morning that went wrong, and the update
+     * lands the day after such a morning as often as any other. Both new columns are
+     * nullable so the row reads as "ended at an unknown moment, notice not read yet" —
+     * an upgrade that silently marked it read would delete the evidence.
+     */
+    @Test
+    fun `a chain that ended before the upgrade keeps its unread notice`() = runBlocking {
+        createVersion1Database()
+
+        val db = openCurrent()
+        val instance = db.instanceDao().getById(3)
+        db.close()
+
+        assertThat(instance).isNotNull()
+        assertThat(instance!!.endedReason).isEqualTo(EndedReason.AUTO_DISMISSED)
+        assertThat(instance.snoozesUsed).isEqualTo(1)
+        assertThat(instance.endedAt).isNull()
+        assertThat(instance.noticeAckAt).isNull()
+    }
+
+    @Test
+    fun `acknowledging a notice writes through the new column`() = runBlocking {
+        createVersion1Database()
+
+        val db = openCurrent()
+        db.instanceDao().acknowledgeNotice(id = 3, at = 555)
+        val acknowledged = db.instanceDao().getById(3)
+        db.close()
+
+        assertThat(acknowledged!!.noticeAckAt).isEqualTo(555)
     }
 
     /**

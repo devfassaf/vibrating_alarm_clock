@@ -252,6 +252,40 @@ class AlarmSessionReducerTest {
         assertThat(done.endedReason).isEqualTo(EndReason.USER_DISMISSED)
     }
 
+    /**
+     * The morning-after notice quotes when the chain stopped ("rang twice, until 07:40"),
+     * and the banner has to be able to say it hours later, after a reboot — so the moment
+     * has to be recorded on the row rather than recomputed from a ring that is over.
+     */
+    @Test
+    fun `every ending records when it ended`() {
+        val config = config(repeatCount = 0)
+        val end = occurrence.plusSeconds(90)
+
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+        listOf(
+            SessionEvent.PlaybackComplete(end) to EndReason.AUTO_DISMISSED,
+            SessionEvent.UserDismiss(end) to EndReason.USER_DISMISSED,
+            SessionEvent.Preempted(end) to EndReason.PREEMPTED,
+        ).forEach { (event, reason) ->
+            val (done, _) = reduce(firing, config, event)
+            assertThat(done.endedReason).isEqualTo(reason)
+            assertThat(done.endedAt).isEqualTo(end)
+        }
+    }
+
+    /** A chain still running has no end time to show, and the banner must not invent one. */
+    @Test
+    fun `a live chain has no end time`() {
+        val config = config(repeatCount = 3)
+
+        val (firing, _) = reduce(scheduled(), config, SessionEvent.Fire(occurrence))
+        val (snoozed, _) = reduce(firing, config, SessionEvent.PlaybackComplete(occurrence))
+
+        assertThat(firing.endedAt).isNull()
+        assertThat(snoozed.endedAt).isNull()
+    }
+
     // --- Recovery ---
 
     @Test
@@ -290,6 +324,18 @@ class AlarmSessionReducerTest {
         val (resumed, effects) = reduce(state, config, SessionEvent.Resume(now))
         assertThat(resumed.nextActionAt).isEqualTo(now.plus(config.refireGrace))
         assertThat(effects).contains(SessionEffect.ArmExact(resumed.nextActionAt))
+    }
+
+    /** The phone was off through the alarm: that ending is dated too. */
+    @Test
+    fun `a trigger given up on records when it was given up on`() {
+        val config = config(repeatCount = 3)
+        val now = occurrence.plus(Duration.ofHours(3))
+
+        val (done, _) = reduce(scheduled(), config, SessionEvent.Resume(now))
+
+        assertThat(done.endedReason).isEqualTo(EndReason.MISSED)
+        assertThat(done.endedAt).isEqualTo(now)
     }
 
     @Test

@@ -14,7 +14,7 @@ import androidx.sqlite.db.SupportSQLiteDatabase
         AlarmInstanceEntity::class,
         ReliabilityLogEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDb : RoomDatabase() {
@@ -31,7 +31,7 @@ abstract class AppDb : RoomDatabase() {
          */
         fun build(context: Context): AppDb =
             Room.databaseBuilder(context, AppDb::class.java, "alarms.db")
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
 
         /**
@@ -47,6 +47,20 @@ abstract class AppDb : RoomDatabase() {
                 db.execSQL(
                     "ALTER TABLE alarms ADD COLUMN soundRampUp INTEGER NOT NULL DEFAULT 0",
                 )
+            }
+        }
+
+        /**
+         * Adds when a chain ended, and whether its morning-after notice was read.
+         *
+         * Both nullable, so every existing row means "ended at an unknown moment, notice
+         * not acknowledged" — and a chain that finished last night before the update
+         * still produces its notice instead of vanishing with the migration.
+         */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE instances ADD COLUMN endedAt INTEGER")
+                db.execSQL("ALTER TABLE instances ADD COLUMN noticeAckAt INTEGER")
             }
         }
     }

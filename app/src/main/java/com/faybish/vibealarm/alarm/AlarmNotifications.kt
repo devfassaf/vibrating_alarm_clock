@@ -7,7 +7,7 @@ import android.content.Context
 import android.os.Build
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
-import com.faybish.vibealarm.ui.format.formatDate
+import com.faybish.vibealarm.ui.format.NoticeText
 import com.faybish.vibealarm.ui.format.formatTime
 import java.time.Instant
 import java.time.ZoneId
@@ -155,13 +155,12 @@ class AlarmNotifications(private val context: Context) {
     }
 
     fun showMissed(alarm: AlarmEntity, occurrence: Instant) {
-        val zoned = occurrence.atZone(ZoneId.systemDefault())
-        // Dated, because a missed alarm can be from a day the phone spent switched off.
-        val time = "${formatDate(zoned.toLocalDate(), appLocale())} ${occurrence.asClockTime()}"
+        val text = NoticeText.neverRangDetail(context, alarm.label, occurrence)
         val notification = Notification.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(R.drawable.ic_alarm_notification)
-            .setContentTitle(context.getString(R.string.notification_missed_title))
-            .setContentText(context.getString(R.string.notification_missed_text, alarm.displayLabel(), time))
+            .setContentTitle(NoticeText.neverRangTitle(context))
+            .setContentText(text)
+            .setStyle(Notification.BigTextStyle().bigText(text))
             .setAutoCancel(true)
             .setContentIntent(AlarmIntents.appPendingIntent(context, alarm.id))
             .build()
@@ -184,28 +183,24 @@ class AlarmNotifications(private val context: Context) {
      * @param ringCount rings including the first.
      */
     fun showUnattended(alarm: AlarmEntity, firstRingAt: Instant, endedAt: Instant, ringCount: Int) {
-        val text = context.resources.getQuantityString(
-            R.plurals.notification_unattended_text,
-            ringCount,
-            alarm.displayLabel(),
-            firstRingAt.asClockTime(),
-            endedAt.asClockTime(),
-            ringCount,
+        val text = NoticeText.unattendedDetail(
+            context = context,
+            label = alarm.label,
+            firstRingAt = firstRingAt,
+            endedAt = endedAt,
+            ringCount = ringCount,
         )
         val notification = Notification.Builder(context, CHANNEL_STATUS)
             .setSmallIcon(R.drawable.ic_alarm_notification)
-            .setContentTitle(
-                context.getString(
-                    R.string.notification_unattended_title,
-                    firstRingAt.asClockTime(),
-                ),
-            )
+            .setContentTitle(NoticeText.unattendedTitle(context, firstRingAt))
             .setContentText(text)
             .setStyle(Notification.BigTextStyle().bigText(text))
             .setWhen(endedAt.toEpochMilli())
             .setShowWhen(true)
-            // Stays until it is dealt with: on a Shabbat morning it cannot be swiped away,
-            // and it is the only evidence that the alarm did its job.
+            // Tapping it opens the app, where the same sentence is waiting as a banner —
+            // so clearing the notice never costs the user the chance to read it. Samsung
+            // shows notifications as a two-second pill by default, which is not long
+            // enough to take in a sentence with a time and a count in it.
             .setAutoCancel(true)
             .setContentIntent(AlarmIntents.appPendingIntent(context, alarm.id))
             .build()
@@ -223,24 +218,30 @@ class AlarmNotifications(private val context: Context) {
     fun cancelForAlarm(alarmId: Long) {
         manager.cancel(firingId(alarmId))
         manager.cancel(snoozedId(alarmId))
-        manager.cancel(unattendedId(alarmId))
+        cancelNotices(alarmId)
     }
 
     fun cancelSnoozed(alarmId: Long) = manager.cancel(snoozedId(alarmId))
 
-    /** Called when the alarm starts ringing again, so yesterday's notice cannot linger. */
-    fun cancelUnattended(alarmId: Long) = manager.cancel(unattendedId(alarmId))
+    /**
+     * Both morning-after notices, together.
+     *
+     * They are cancelled as a pair because they are read as a pair: each one puts the same
+     * red dot on the launcher icon, and a user clearing "it rang and you slept through it"
+     * while last week's "it never rang" stays behind is left with a dot that the app has
+     * already stopped explaining.
+     */
+    fun cancelNotices(alarmId: Long) {
+        manager.cancel(unattendedId(alarmId))
+        manager.cancel(missedId(alarmId))
+    }
 
     private fun AlarmEntity.displayLabel(): String =
         label.ifBlank { context.getString(R.string.default_alarm_label) }
 
     private fun appLocale(): Locale = context.resources.configuration.locales[0]
 
-    /**
-     * The same clock the rest of the app shows: the device's 12/24-hour setting, in the
-     * app's language. A notification reading "7:30 AM" beside a screen reading "7:30"
-     * sends the user looking for which of the two is wrong.
-     */
+    /** The same clock the rest of the app shows: see [NoticeText]. */
     private fun Instant.asClockTime(): String =
         formatTime(context, atZone(ZoneId.systemDefault()).toLocalTime(), appLocale())
 

@@ -129,6 +129,15 @@ Three channels, none of which carries a sound or a vibration of its own:
 | `alarm_silent` | a ringing alarm in screen-stays-dark mode | LOW |
 | `alarm_status` | snoozed, "missed alarm at 07:30", and never-rang notices | DEFAULT |
 
+The two morning-after notices (`400_000+id` unattended, `300_000+id` never-rang) are the
+only ones that can outlive the night, so they are the ones that put a red dot on the
+launcher icon. Each is mirrored by a banner in the alarm list built from the same
+`ui/format/NoticeText`, and the pair is retired together: `MissedNotice` rows come from
+`instances` (`endedReason` in AUTO_DISMISSED/MISSED/PREEMPTED, `noticeAckAt IS NULL`),
+"got it" writes `noticeAckAt` **and** calls `cancelNotices`, and the alarm ringing again
+does both from `ShowFiringNotification`. `acknowledgeNoticesFor` is scoped to `state = 3`
+because it runs from inside a ring.
+
 Notification ids are per-alarm (`base + alarmId`) so one alarm's notice can never take
 another's slot: firing `100000+`, snoozed `200000+`, missed `300000+`, unattended `400000+`.
 
@@ -197,7 +206,7 @@ opened again, nothing is re-armed. That is why it is presented as a condition, n
 
 ## Tests
 
-351 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
+376 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
 `domain/`; Robolectric tests for the wiring that a unit test cannot see — the real pipeline
 against AlarmManager and Room, the Room migration from a hand-built version-1 file, the
 notification wording in both languages, and that silent mode does not silence the engines.

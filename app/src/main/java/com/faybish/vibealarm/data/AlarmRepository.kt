@@ -84,6 +84,18 @@ class AlarmRepository(private val db: AppDb) {
 
     suspend fun getInstance(id: Long): AlarmInstanceEntity? = instanceDao.getById(id)
 
+    fun observeUnreadNotices(): Flow<List<AlarmInstanceEntity>> =
+        instanceDao.observeUnreadNotices(EndedReason.NOTICE_WORTHY)
+
+    suspend fun unreadNotices(): List<AlarmInstanceEntity> =
+        instanceDao.unreadNotices(EndedReason.NOTICE_WORTHY)
+
+    suspend fun acknowledgeNotice(instanceId: Long, at: Long = System.currentTimeMillis()) =
+        instanceDao.acknowledgeNotice(instanceId, at)
+
+    suspend fun acknowledgeNoticesFor(alarmId: Long, at: Long = System.currentTimeMillis()) =
+        instanceDao.acknowledgeNoticesFor(alarmId, at)
+
     suspend fun saveInstance(instance: AlarmInstanceEntity): Long {
         val id = instanceDao.upsert(instance)
         return if (id == -1L) instance.id else id
