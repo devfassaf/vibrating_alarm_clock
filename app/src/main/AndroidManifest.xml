@@ -16,6 +16,14 @@
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!--
+        The ringing screen, on every ring. A full-screen intent is a request SystemUI is
+        free to refuse: measured on a dozing phone, it granted rings 1 and 3 of a chain and
+        never even evaluated ring 2, leaving an alarm buzzing with nothing on screen to stop
+        it. This permission is the documented exemption that lets the alarm service start
+        that screen itself. Surfaced in the reliability screen, never required to ring.
+    -->
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SYSTEM_EXEMPTED" />
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />

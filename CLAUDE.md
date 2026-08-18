@@ -92,6 +92,27 @@ The one thing added *after* the fact is allowed to be informational: the
     and without the `state = 3` filter the ringing chain marks its own row read before it
     has anything to report, so the notice it goes on to create is invisible from birth.
 
+15. **A full-screen intent is only weighed when the notification is *added*.** It must ride
+    on `buildStarting` — the post that `startForeground` makes — and not only on the
+    `buildFiring` update that follows a moment later. Measured on a dozing phone: with the
+    intent on the update alone, SystemUI granted the first ring of a chain and never even
+    evaluated the second, so ring two arrived with nothing on screen, no snooze, no dismiss,
+    and no activity to read the volume keys. Neither launch route may carry
+    `FLAG_ACTIVITY_CLEAR_TASK`: one ring can start the screen twice (the platform, and the
+    service which cannot know whether the platform did), and CLEAR_TASK made the second start
+    tear down what the first had just shown. `singleInstance` turns the duplicate into
+    `onNewIntent`. The service's own `startActivity` is a second chance, gated on
+    `turnScreenOn` — a dark-screen alarm must never light anything up — and it needs
+    `SYSTEM_ALERT_WINDOW` to survive background-activity-launch checks, which is why that is
+    an **informational** row in the reliability screen rather than a demand.
+16. **Volume keys snooze through two mechanisms, because neither covers the job alone.**
+    `AlarmActivity.onKeyDown` works only while that activity has focus; `VolumeKeySnooze`'s
+    media session receives the keys with the screen off, but only while nothing is playing on
+    the alarm stream — with a ringtone active the platform routes them to that stream instead,
+    which is what the stream watch is for. Measured: with the screen dark *and* a ringtone
+    playing, the key never reaches the app or the stream at all, so that one combination
+    cannot be caught from an app. The keys always **snooze**, never dismiss.
+
 ## Conventions
 
 - **Strings**: `values/` (English) and `values-iw/` (Hebrew) must stay at exact parity, with

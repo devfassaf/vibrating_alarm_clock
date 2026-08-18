@@ -21,6 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
 /**
@@ -44,6 +45,9 @@ class AlarmRingingService : Service() {
     private var timerJob: Job? = null
     private var currentStartId: Int = 0
 
+    /** Volume keys as snooze, for the rings where nothing is on screen to press. */
+    private var volumeKeys: VolumeKeySnooze? = null
+
     private val runtime: SessionRuntime get() = AppGraph.sessionRuntime
     private val notifications: AlarmNotifications get() = AppGraph.notifications
     private val logger: ReliabilityLogger get() = AppGraph.reliabilityLogger
@@ -59,14 +63,54 @@ class AlarmRingingService : Service() {
             if (alarmId == playingAlarmId) stopOutputsOnly()
         }
 
-        override fun showFiring(alarm: AlarmEntity, instanceId: Long) =
+        override fun showFiring(alarm: AlarmEntity, instanceId: Long) {
             notifications.postFiring(alarm, instanceId)
+            if (alarm.turnScreenOn) showRingingScreen(alarm, instanceId)
+        }
+    }
+
+    /**
+     * Starts the ringing screen ourselves rather than waiting for the notification's
+     * full-screen intent to be honoured.
+     *
+     * The full-screen intent is a request SystemUI is free to refuse, and on a dozing phone
+     * it refuses unpredictably: measured on a three-ring chain, rings one and three were
+     * granted and ring two was declined without a word. A declined ring is an alarm
+     * vibrating with no snooze button, no dismiss button, and no volume-key handler either —
+     * the only way out is to unlock the phone and switch the alarm off from the app.
+     *
+     * An alarm whose screen must stay dark never comes here: that mode is the whole point
+     * of the app, and lighting a bedroom at 6am would break it.
+     */
+    private fun showRingingScreen(alarm: AlarmEntity, instanceId: Long) {
+        try {
+            startActivity(AlarmIntents.ringingActivity(this, alarm.id, instanceId))
+        } catch (e: Exception) {
+            // Background activity starts can be refused. The full-screen intent is still
+            // attached to the notification, so this is a second chance, not the only one.
+            logger.log(
+                ReliabilityLogger.FGS_DENIED,
+                "alarm=${alarm.id} startActivity ${e.javaClass.simpleName}: ${e.message}",
+            )
+        }
     }
 
     override fun onCreate() {
         super.onCreate()
         vibration = VibrationEngine(this)
         sound = SoundEngine(this, logger, scope)
+    }
+
+    /**
+     * One press, one snooze — dispatched on the service's own scope so it survives the
+     * media session being torn down by the transition it starts.
+     */
+    private fun snoozeFromVolumeKey(alarm: AlarmEntity, instanceId: Long) {
+        val alarmId = alarm.id
+        scope.launch {
+            runtime.handle(alarmId, SessionEvent.UserSnooze(Instant.now()), sink, instanceId)
+            stopSelf(currentStartId)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -92,13 +136,12 @@ class AlarmRingingService : Service() {
         // The platform allows only a few seconds between startForegroundService and
         // startForeground, so post before touching the database.
         val turnScreenOn = intent.getBooleanExtra(EXTRA_TURN_SCREEN_ON, true)
-        if (!startForegroundCompat(alarmId, turnScreenOn)) return START_NOT_STICKY
+        val instanceId = intent.getLongExtra(AlarmIntents.EXTRA_INSTANCE_ID, 0)
+        if (!startForegroundCompat(alarmId, instanceId, turnScreenOn)) return START_NOT_STICKY
 
         playingAlarmId = alarmId
         currentStartId = startId
         acquireWakeLock(PROVISIONAL_WAKE_LOCK_MS)
-
-        val instanceId = intent.getLongExtra(AlarmIntents.EXTRA_INSTANCE_ID, 0)
         scope.launch {
             runtime.preemptOthers(exceptAlarmId = alarmId, sink = runtime.ServiceControlSink())
             runtime.handle(alarmId, SessionEvent.Fire(Instant.now()), sink, instanceId)
@@ -111,8 +154,12 @@ class AlarmRingingService : Service() {
      *   notification is posted directly in that case, so the alarm still surfaces —
      *   a refusal must never turn into a silent morning.
      */
-    private fun startForegroundCompat(alarmId: Long, turnScreenOn: Boolean): Boolean {
-        val notification = notifications.buildStarting(turnScreenOn)
+    private fun startForegroundCompat(
+        alarmId: Long,
+        instanceId: Long,
+        turnScreenOn: Boolean,
+    ): Boolean {
+        val notification = notifications.buildStarting(turnScreenOn, alarmId, instanceId)
         return try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 startForeground(
@@ -189,6 +236,19 @@ class AlarmRingingService : Service() {
             }
             acquireWakeLock(plan.windowMs + WAKE_LOCK_MARGIN_MS)
 
+            // Whether the keys snooze is the alarm's own choice, falling back to the global
+            // setting. Started per window and released with the outputs, so between rings
+            // the keys go back to being volume keys.
+            if (VolumeKeySnooze.enabledFor(
+                    perAlarm = alarm.volumeKeysSnooze,
+                    globalDefault = AppGraph.settings.volumeKeysSnooze.first(),
+                )
+            ) {
+                volumeKeys = VolumeKeySnooze(this@AlarmRingingService) {
+                    snoozeFromVolumeKey(alarm, instanceId)
+                }.also { it.start() }
+            }
+
             // A ringtone shorter than the pattern is silenced on its own schedule; a
             // waveform played once needs no timer, it ends by itself. Child of this job, so
             // cancelling playback cancels it too.
@@ -219,6 +279,11 @@ class AlarmRingingService : Service() {
     private fun stopOutputsOnly() {
         timerJob?.cancel()
         timerJob = null
+        // Before the engines: stopping the sound puts the alarm stream back to the level it
+        // had before the alarm raised it, and the watcher would read that restore as the
+        // user reaching for the volume keys — snoozing an alarm that just ended.
+        volumeKeys?.stop()
+        volumeKeys = null
         vibration.stop()
         sound.stop()
     }

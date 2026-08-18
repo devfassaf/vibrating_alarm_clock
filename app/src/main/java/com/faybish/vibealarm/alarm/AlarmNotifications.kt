@@ -110,14 +110,29 @@ class AlarmNotifications(private val context: Context) {
         return builder.build()
     }
 
-    /** Minimal notification posted within the service's startForeground deadline. */
-    fun buildStarting(turnScreenOn: Boolean): Notification =
+    /**
+     * Minimal notification posted within the service's startForeground deadline.
+     *
+     * It carries the full-screen intent even though [buildFiring] will replace it a moment
+     * later: this is the post that *adds* the notification, and SystemUI only weighs a
+     * full-screen intent when an entry is added — an intent that arrives with the update
+     * is never looked at.
+     */
+    fun buildStarting(turnScreenOn: Boolean, alarmId: Long = 0, instanceId: Long = 0): Notification =
         Notification.Builder(context, if (turnScreenOn) CHANNEL_ALERTING else CHANNEL_SILENT)
             .setSmallIcon(R.drawable.ic_alarm_notification)
             .setContentTitle(context.getString(R.string.notification_firing_text))
             .setCategory(Notification.CATEGORY_ALARM)
             .setOngoing(true)
             .setShowWhen(false)
+            .apply {
+                if (turnScreenOn && alarmId != 0L) {
+                    setFullScreenIntent(
+                        AlarmIntents.ringingActivityIntent(context, alarmId, instanceId),
+                        true,
+                    )
+                }
+            }
             .build()
 
     fun postFiring(alarm: AlarmEntity, instanceId: Long) {
