@@ -20,6 +20,7 @@ enum class CheckId {
     EXACT_ALARMS,
     NOTIFICATIONS,
     FULL_SCREEN_INTENT,
+    DRAW_OVER_OTHER_APPS,
     BATTERY_OPTIMIZATION,
     AMPLITUDE_CONTROL,
     SYSTEM_VIBRATION_STRENGTH,
@@ -57,6 +58,7 @@ class ReliabilityChecks(
         exactAlarms(),
         notifications(),
         fullScreenIntent(),
+        drawOverOtherApps(),
         batteryOptimization(),
         amplitudeControl(),
         systemVibrationStrength(),
@@ -84,6 +86,25 @@ class ReliabilityChecks(
         id = CheckId.FULL_SCREEN_INTENT,
         status = if (context.canUseFullScreenIntent()) CheckStatus.OK else CheckStatus.ACTION_NEEDED,
         fixable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE,
+    )
+
+    /**
+     * What makes the ringing screen appear on *every* ring rather than most of them.
+     *
+     * The full-screen intent above is a request; SystemUI weighs it only when the
+     * notification is added and may decline without a word — measured on a dozing phone, it
+     * granted the first and third rings of one chain and skipped the second, which leaves an
+     * alarm vibrating with no snooze or dismiss on screen and the phone needing to be
+     * unlocked. With this granted the alarm service starts that screen itself, which no
+     * longer depends on the platform's mood.
+     */
+    private fun drawOverOtherApps() = CheckResult(
+        id = CheckId.DRAW_OVER_OTHER_APPS,
+        // INFO, not ACTION_NEEDED: the alarm rings and shows its screen without this. What
+        // it buys is independence from the platform's judgement — with it granted the
+        // service starts the screen itself instead of asking SystemUI to.
+        status = if (Settings.canDrawOverlays(context)) CheckStatus.OK else CheckStatus.INFO,
+        fixable = true,
     )
 
     private fun batteryOptimization(): CheckResult {
@@ -169,6 +190,10 @@ class ReliabilityChecks(
             } else {
                 false
             }
+
+        CheckId.DRAW_OVER_OTHER_APPS ->
+            start(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, appUri())) ||
+                start(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION))
 
         // Asking for the exemption directly is the point of this permission; the
         // generic battery-settings page is the fallback if the dialog is refused.

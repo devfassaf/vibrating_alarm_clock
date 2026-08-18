@@ -86,7 +86,12 @@ object AlarmIntents {
             data = dataUri(alarmId, "ring")
             putExtra(EXTRA_ALARM_ID, alarmId)
             putExtra(EXTRA_INSTANCE_ID, instanceId)
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
+            // No CLEAR_TASK: the screen can now be started twice for one ring — once by the
+            // platform honouring the full-screen intent and once by the service, which does
+            // not know whether the platform did. CLEAR_TASK made the second start tear down
+            // the instance the first had just put on screen; without it a duplicate arrives
+            // as onNewIntent on the singleInstance activity, which is a no-op that rebinds.
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
         return PendingIntent.getActivity(
             context,
@@ -95,6 +100,23 @@ object AlarmIntents {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
+
+    /**
+     * The same screen, started by us instead of by the platform.
+     *
+     * A full-screen intent is a request, not a guarantee: SystemUI decides, and measurement
+     * on a dozing phone showed it granting the first ring of a chain and silently declining
+     * the second, leaving an alarm buzzing with no way to stop it that does not involve
+     * unlocking the phone. The service starts this itself so every ring gets the screen the
+     * user asked for.
+     */
+    fun ringingActivity(context: Context, alarmId: Long, instanceId: Long): Intent =
+        Intent(context, AlarmActivity::class.java).apply {
+            data = dataUri(alarmId, "ring")
+            putExtra(EXTRA_ALARM_ID, alarmId)
+            putExtra(EXTRA_INSTANCE_ID, instanceId)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
 
     /** Lock-screen "next alarm" tap target and the snoozed notification's body tap. */
     fun appPendingIntent(context: Context, alarmId: Long): PendingIntent {

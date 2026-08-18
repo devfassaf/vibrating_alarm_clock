@@ -152,7 +152,9 @@
     <string name="check_notifications_description">נדרשות להודעות הצלצול, הנודניק וההחמצה. הרטט עצמו פועל גם בלעדיהן.</string>
     <string name="check_full_screen">מסך השכמה מלא</string>
     <string name="check_full_screen_description">מאפשר למסך ההשכמה להופיע מעל מסך הנעילה עם כפתורי הכיבוי והנודניק.</string>
+    <string name="check_overlay">הצגה מעל אפליקציות אחרות</string>
     <string name="check_battery">פטור מאופטימיזציית סוללה</string>
+    <string name="check_overlay_description">ביטוח לא חיוני למסך ההשכמה. גם בלי ההרשאה המסך עולה בכל צלצול; עם ההרשאה האפליקציה פותחת אותו בעצמה במקום לבקש מאנדרואיד, שרשאי לסרב. שום דבר כאן לא מונע מההשכמה לצלצל או לרטוט.</string>
     <string name="check_battery_description">מונע מהמערכת לדחות את ההשכמה בזמן שהטלפון ישן.</string>
     <string name="check_amplitude">שליטה בעוצמת רטט</string>
     <string name="check_amplitude_description">האם החומרה יכולה לשנות עוצמה. אם לא, העוצמה מדומה בעזרת פולסים קצרים.</string>

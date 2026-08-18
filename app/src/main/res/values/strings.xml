@@ -150,7 +150,9 @@
     <string name="check_notifications_description">Needed for the ringing, snoozed and missed notices. The vibration itself still works without it.</string>
     <string name="check_full_screen">Full-screen alarm</string>
     <string name="check_full_screen_description">Lets the alarm screen appear over the lock screen with its Dismiss and Snooze buttons.</string>
+    <string name="check_overlay">Display over other apps</string>
     <string name="check_battery">Battery optimization exemption</string>
+    <string name="check_overlay_description">Optional insurance for the ringing screen. The alarm brings it up on every ring without this; granting it lets the app open that screen itself instead of asking Android, which is free to decline. Nothing here stops the alarm ringing or vibrating.</string>
     <string name="check_battery_description">Stops the system from deferring the alarm while the phone sleeps.</string>
     <string name="check_amplitude">Vibration strength control</string>
     <string name="check_amplitude_description">Whether the hardware can vary strength. If not, intensity is emulated with short pulses.</string>

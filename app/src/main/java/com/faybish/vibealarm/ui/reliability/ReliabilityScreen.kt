@@ -277,6 +277,7 @@ private fun checkTitle(id: CheckId): String = stringResource(
         CheckId.EXACT_ALARMS -> R.string.check_exact_alarms
         CheckId.NOTIFICATIONS -> R.string.check_notifications
         CheckId.FULL_SCREEN_INTENT -> R.string.check_full_screen
+        CheckId.DRAW_OVER_OTHER_APPS -> R.string.check_overlay
         CheckId.BATTERY_OPTIMIZATION -> R.string.check_battery
         CheckId.AMPLITUDE_CONTROL -> R.string.check_amplitude
         CheckId.SYSTEM_VIBRATION_STRENGTH -> R.string.check_system_vibration
@@ -291,6 +292,7 @@ private fun checkDescription(id: CheckId): String = stringResource(
         CheckId.EXACT_ALARMS -> R.string.check_exact_alarms_description
         CheckId.NOTIFICATIONS -> R.string.check_notifications_description
         CheckId.FULL_SCREEN_INTENT -> R.string.check_full_screen_description
+        CheckId.DRAW_OVER_OTHER_APPS -> R.string.check_overlay_description
         CheckId.BATTERY_OPTIMIZATION -> R.string.check_battery_description
         CheckId.AMPLITUDE_CONTROL -> R.string.check_amplitude_description
         CheckId.SYSTEM_VIBRATION_STRENGTH -> R.string.check_system_vibration_description
