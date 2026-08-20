@@ -113,6 +113,13 @@ The one thing added *after* the fact is allowed to be informational: the
     playing, the key never reaches the app or the stream at all, so that one combination
     cannot be caught from an app. The keys always **snooze**, never dismiss.
 
+17. **A duplicated alarm is created switched off.** Two enabled alarms on the same minute
+    run into `preemptOthers`: one silences the other, the silenced one is recorded
+    `PREEMPTED`, and the morning after reports a missed alarm that never failed. The copy's
+    card opens as the draft instead — moving it is the reason to duplicate — and saving is
+    what enables it (invariant 10). Long-press actions go through the same unsaved-changes
+    guard as opening another card, because duplicating takes over the draft.
+
 ## Conventions
 
 - **Strings**: `values/` (English) and `values-iw/` (Hebrew) must stay at exact parity, with

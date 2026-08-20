@@ -13,6 +13,10 @@
 
     <!-- Generic actions -->
     <string name="action_ok">אישור</string>
+    <string name="action_alarm_options">אפשרויות להשכמה</string>
+    <string name="duplicate_suffix">(עותק)</string>
+    <string name="duplicate_created">העותק נוצר כבוי — שנו את השעה ולחצו שמירה</string>
+    <string name="delete_confirm_title">למחוק את ההשכמה?</string>
     <string name="action_cancel">ביטול</string>
     <string name="action_got_it">הבנתי</string>
     <string name="action_cancel_snooze">ביטול הנודניק</string>

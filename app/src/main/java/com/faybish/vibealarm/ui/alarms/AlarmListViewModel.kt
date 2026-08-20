@@ -15,6 +15,7 @@ import com.faybish.vibealarm.data.VibrationPatternEntity
 import com.faybish.vibealarm.data.hasSameEditsAs
 import com.faybish.vibealarm.data.withEditsFrom
 import com.faybish.vibealarm.domain.NextOccurrenceCalculator
+import com.faybish.vibealarm.domain.duplicateLabel
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.SessionEvent
 import java.time.Instant
@@ -165,6 +166,41 @@ class AlarmListViewModel : ViewModel() {
             scheduler.onAlarmSaved(saved)
             beginEdit(saved)
             onCreated(saved, nextTrigger(saved))
+        }
+    }
+
+    /**
+     * Copies an alarm and opens the copy for editing.
+     *
+     * The copy arrives **switched off**, which is not timidity: two enabled alarms on the
+     * same minute run into [SessionRuntime.preemptOthers] — one silences the other, the
+     * silenced one is recorded PREEMPTED, and the morning after reports a missed alarm that
+     * never actually failed. Saving the copy is what enables it (invariant 10), and by then
+     * the user has had the chance to move it, which is the reason to duplicate at all.
+     */
+    fun duplicate(
+        alarmId: Long,
+        copySuffix: String,
+        onCreated: (AlarmEntity) -> Unit = {},
+    ) {
+        viewModelScope.launch {
+            val original = repository.getAlarm(alarmId) ?: return@launch
+            val now = System.currentTimeMillis()
+            val id = repository.saveAlarm(
+                original.copy(
+                    id = 0,
+                    enabled = false,
+                    label = duplicateLabel(original.label, copySuffix),
+                    createdAt = now,
+                    updatedAt = now,
+                ),
+            )
+            val copy = repository.getAlarm(id) ?: return@launch
+            // Through the scheduler like any other save: it arms nothing for a disabled
+            // alarm, and going around it is how an alarm ends up armed twice.
+            scheduler.onAlarmSaved(copy)
+            beginEdit(copy)
+            onCreated(copy)
         }
     }
 

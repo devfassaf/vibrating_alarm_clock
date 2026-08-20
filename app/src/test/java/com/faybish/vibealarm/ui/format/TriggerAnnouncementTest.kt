@@ -131,4 +131,41 @@ class TriggerAnnouncementTest {
         assertThat(announce("en", trigger = null))
             .isEqualTo("This alarm has no upcoming time — pick days or dates.")
     }
+
+    // --- naming one alarm, for the dialogs a long press opens ---
+
+    /**
+     * Both actions behind a long press are hard to take back, and the gesture lands on a
+     * list where alarms differ by fifteen minutes — so the dialog has to say which one it
+     * is holding, in the same clock format the list uses.
+     */
+    @Test
+    fun `an alarm is named by its time and label`() {
+        val context = localized("iw")
+        val alarm = com.faybish.vibealarm.data.AlarmEntity(
+            label = "השכמת שבת",
+            timeMinutesOfDay = 7 * 60 + 30,
+        )
+
+        assertThat(alarmDescription(context, Locale("iw"), alarm)).isEqualTo("7:30 · השכמת שבת")
+    }
+
+    @Test
+    fun `an unlabelled alarm is just its time`() {
+        val context = localized("iw")
+        val alarm = com.faybish.vibealarm.data.AlarmEntity(timeMinutesOfDay = 6 * 60 + 5)
+
+        assertThat(alarmDescription(context, Locale("iw"), alarm)).isEqualTo("6:05")
+    }
+
+    @Test
+    fun `English names it too`() {
+        val context = localized("en")
+        val alarm = com.faybish.vibealarm.data.AlarmEntity(
+            label = "Wake up",
+            timeMinutesOfDay = 7 * 60 + 30,
+        )
+
+        assertThat(alarmDescription(context, Locale.ENGLISH, alarm)).isEqualTo("7:30 · Wake up")
+    }
 }
