@@ -55,6 +55,14 @@ interface PatternDao {
 
 @Dao
 interface InstanceDao {
+
+    companion object {
+        /** Chains that ended in a way the user should hear about and has not acknowledged. */
+        const val UNREAD_NOTICES = "SELECT * FROM instances WHERE state = 3 " +
+            "AND noticeAckAt IS NULL AND endedReason IN (:reasons) " +
+            "ORDER BY occurrenceEpochMillis DESC"
+    }
+
     @Query("SELECT * FROM instances WHERE alarmId = :alarmId AND state != 3 ORDER BY id DESC LIMIT 1")
     suspend fun getActiveForAlarm(alarmId: Long): AlarmInstanceEntity?
 
@@ -76,20 +84,37 @@ interface InstanceDao {
      * Watched by the list screen, so the launcher's red dot always has something inside
      * the app that explains it.
      */
-    @Query(
-        "SELECT * FROM instances WHERE state = 3 AND noticeAckAt IS NULL " +
-            "AND endedReason IN (:reasons) ORDER BY occurrenceEpochMillis DESC",
-    )
+    @Query(UNREAD_NOTICES)
     fun observeUnreadNotices(reasons: List<Int>): Flow<List<AlarmInstanceEntity>>
 
-    @Query(
-        "SELECT * FROM instances WHERE state = 3 AND noticeAckAt IS NULL " +
-            "AND endedReason IN (:reasons) ORDER BY occurrenceEpochMillis DESC",
-    )
+    /**
+     * The same query as [observeUnreadNotices], for callers that cannot collect a Flow —
+     * the pipeline test runs on a paused dispatcher where a Room Flow never emits. Sharing
+     * the string is what keeps the banner and the assertions describing one set of rows.
+     */
+    @Query(UNREAD_NOTICES)
     suspend fun unreadNotices(reasons: List<Int>): List<AlarmInstanceEntity>
 
-    @Query("UPDATE instances SET noticeAckAt = :at WHERE id = :id")
-    suspend fun acknowledgeNotice(id: Long, at: Long)
+    /**
+     * Every unread notice of one alarm, because the notification is per-alarm: two unread
+     * rows share one slot and one red dot, so acknowledging half of them would leave a
+     * banner standing with no dot behind it.
+     */
+    @Query(
+        "UPDATE instances SET noticeAckAt = :at WHERE alarmId = :alarmId AND noticeAckAt IS NULL",
+    )
+    suspend fun acknowledgeNoticesOf(alarmId: Long, at: Long)
+
+    /**
+     * Notices produced since [since] — used when the user switches an alarm off mid-ring.
+     * That chain may still commit its ending and report a notice for a morning the user
+     * has just cancelled by hand, while notices from earlier mornings stay unread.
+     */
+    @Query(
+        "UPDATE instances SET noticeAckAt = :at WHERE alarmId = :alarmId " +
+            "AND noticeAckAt IS NULL AND endedAt IS NOT NULL AND endedAt >= :since",
+    )
+    suspend fun acknowledgeNoticesSince(alarmId: Long, since: Long, at: Long): Int
 
     /**
      * Used when the alarm rings again: last night's notice is no longer the news.
@@ -110,8 +135,16 @@ interface InstanceDao {
     @Query("DELETE FROM instances WHERE alarmId = :alarmId AND state != 3")
     suspend fun deleteActiveForAlarm(alarmId: Long)
 
-    @Query("DELETE FROM instances WHERE state = 3 AND occurrenceEpochMillis < :olderThan")
-    suspend fun pruneDone(olderThan: Long)
+    /**
+     * Old finished chains, except any whose morning-after notice is still unread: pruning one
+     * of those would leave the notification and the launcher's red dot with nothing behind
+     * them in the app, which is the state invariant 14 exists to prevent.
+     */
+    @Query(
+        "DELETE FROM instances WHERE state = 3 AND occurrenceEpochMillis < :olderThan " +
+            "AND (noticeAckAt IS NOT NULL OR endedReason NOT IN (:noticeReasons))",
+    )
+    suspend fun pruneDone(olderThan: Long, noticeReasons: List<Int>)
 }
 
 @Dao

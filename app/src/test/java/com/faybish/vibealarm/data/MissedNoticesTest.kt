@@ -125,6 +125,25 @@ class MissedNoticesTest {
         assertThat(notices.map { it.instanceId }).containsExactly(2L, 3L, 1L).inOrder()
     }
 
+    /**
+     * The SQL filter and the pure mapper answer the same question and must keep answering it
+     * identically: a reason the query accepts and the mapper drops is a red dot on the
+     * launcher whose row the banner never renders.
+     */
+    @Test
+    fun `the query's reason list is exactly what the mapper reports on`() {
+        val allReasons = listOf(
+            EndedReason.AUTO_DISMISSED,
+            EndedReason.USER_DISMISSED,
+            EndedReason.MISSED,
+            EndedReason.PREEMPTED,
+        )
+
+        assertThat(allReasons.filter { noticeKindOf(it) != null })
+            .containsExactlyElementsIn(EndedReason.NOTICE_WORTHY)
+        assertThat(noticeKindOf(null)).isNull()
+    }
+
     /** Ended before the column existed: still a notice, just without an end time to quote. */
     @Test
     fun `a chain from before the upgrade still reports`() {

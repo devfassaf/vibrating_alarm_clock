@@ -95,6 +95,9 @@ object EndedReason {
     /**
      * The endings the user is told about the next morning. USER_DISMISSED is absent on
      * purpose: they were there, they switched it off, and there is nothing to report.
+     * Must stay the exact set `noticeKindOf` maps to a kind — MissedNoticesTest pins the
+     * two together, because a reason in one list and not the other is a red dot on the
+     * launcher whose row the banner never renders.
      */
     val NOTICE_WORTHY = listOf(AUTO_DISMISSED, MISSED, PREEMPTED)
 }

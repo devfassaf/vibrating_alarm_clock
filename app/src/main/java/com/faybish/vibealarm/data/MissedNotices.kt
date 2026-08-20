@@ -38,6 +38,19 @@ data class MissedNotice(
  * A row whose alarm has since been deleted is dropped: there is nothing to name it, and
  * the alarm it was about no longer exists to be fixed.
  */
+/**
+ * How an ending reads the next morning, or null for endings with nothing to report.
+ *
+ * This single mapping is what [EndedReason.NOTICE_WORTHY] — the SQL side of the same
+ * decision — is derived from. Two independent lists drifted apart is a red dot on the
+ * launcher with no banner behind it: the query hands back a row this mapper drops.
+ */
+fun noticeKindOf(endedReason: Int?): NoticeKind? = when (endedReason) {
+    EndedReason.AUTO_DISMISSED -> NoticeKind.UNATTENDED
+    EndedReason.MISSED, EndedReason.PREEMPTED -> NoticeKind.NEVER_RANG
+    else -> null
+}
+
 fun missedNotices(
     instances: List<AlarmInstanceEntity>,
     alarms: List<AlarmEntity>,
@@ -45,11 +58,7 @@ fun missedNotices(
     .filter { it.noticeAckAt == null }
     .mapNotNull { instance ->
         val alarm = alarms.firstOrNull { it.id == instance.alarmId } ?: return@mapNotNull null
-        val kind = when (instance.endedReason) {
-            EndedReason.AUTO_DISMISSED -> NoticeKind.UNATTENDED
-            EndedReason.MISSED, EndedReason.PREEMPTED -> NoticeKind.NEVER_RANG
-            else -> return@mapNotNull null
-        }
+        val kind = noticeKindOf(instance.endedReason) ?: return@mapNotNull null
         MissedNotice(
             alarmId = alarm.id,
             instanceId = instance.id,

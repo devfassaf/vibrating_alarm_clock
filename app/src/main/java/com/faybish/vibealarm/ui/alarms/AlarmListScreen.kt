@@ -89,11 +89,11 @@ fun AlarmListScreen(
     // What to do once the unsaved-changes question has been answered.
     var pendingLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
 
-    // The row being held, and the one whose deletion is being confirmed. Ids rather than
-    // entities: the list can change underneath a dialog, and acting on a stale copy would
-    // duplicate or delete something the user is no longer looking at.
-    var actionsFor by remember { mutableStateOf<Long?>(null) }
-    var confirmDeleteFor by remember { mutableStateOf<Long?>(null) }
+    // What a long press (or the card's delete button) is asking about. One value, because
+    // the two dialogs are never open at once, and an id rather than an entity: the list can
+    // change underneath a dialog, and acting on a stale copy would duplicate or delete
+    // something the user is no longer looking at.
+    var pending by remember { mutableStateOf<PendingAlarmAction?>(null) }
 
     val listState = rememberLazyListState()
     val snackbar = remember { SnackbarHostState() }
@@ -114,9 +114,15 @@ fun AlarmListScreen(
      * bubble says when the alarm will ring. Leaving an expanded form open after a save
      * reads as "something is still pending" when nothing is.
      */
-    fun saveOpenCard() {
+    fun saveOpenCard(then: () -> Unit = {}) {
         expandedId = null
-        viewModel.commitDraft { saved, trigger -> announce(saved, trigger) }
+        // `then` runs only once the row is written. Duplicating straight after a save read
+        // the alarm back before the save landed, so the copy carried the old time while the
+        // original carried the new one — and the copy is the card the user is handed.
+        viewModel.commitDraft { saved, trigger ->
+            announce(saved, trigger)
+            then()
+        }
         scope.launch { listState.animateScrollToItem(0) }
     }
 
@@ -184,11 +190,9 @@ fun AlarmListScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // First, above everything: a snooze that is about to ring again is the most
-            // time-critical thing on this screen.
-            // Above the snooze banners: a morning that already went wrong outranks one
-            // that is still coming, and this is the answer to the red dot that brought
-            // the user here in the first place.
+            // Above everything: a morning that already went wrong outranks one that is
+            // still coming, and this is the answer to the red dot that brought the user
+            // here in the first place.
             items(notices, key = { "notice-${it.instanceId}" }) { notice ->
                 MissedNoticeBanner(
                     notice = notice,
@@ -196,6 +200,7 @@ fun AlarmListScreen(
                 )
             }
 
+            // A snooze that is about to ring again is the next most time-critical thing.
             items(snoozed, key = { "snoozed-${it.instanceId}" }) { ring ->
                 SnoozedBanner(
                     label = ring.label,
@@ -249,11 +254,13 @@ fun AlarmListScreen(
                         onPickPattern = { onPickPatternFor(alarm.id) },
                         onPreviewVibration = { viewModel.previewVibration(shown) },
                         onPreviewSound = { viewModel.previewSound(shown) },
-                        onLongPress = { actionsFor = alarm.id },
+                        onLongPress = {
+                            pending = PendingAlarmAction.Choose(alarm.id)
+                        },
+                        // The same confirmation the long press gets: this button sits under
+                        // the alarm the user was just editing, and deletion cannot be undone.
                         onDelete = {
-                            expandedId = null
-                            viewModel.endEdit()
-                            viewModel.delete(alarm.id)
+                            pending = PendingAlarmAction.ConfirmDelete(alarm.id)
                         },
                     )
                 }
@@ -261,56 +268,59 @@ fun AlarmListScreen(
         }
     }
 
-    actionsFor?.let { id ->
-        val target = alarms.firstOrNull { it.id == id }
-        if (target == null) {
-            actionsFor = null
-        } else {
-            AlarmActionsDialog(
-                alarmDescription = alarmDescription(context, locale, target),
+    // A dialog whose alarm has vanished renders nothing rather than clearing the state from
+    // inside composition — a write the same pass has already read is a recomposition it does
+    // not need. The description is remembered because formatting it reads the device's clock
+    // setting and compiles a pattern.
+    val pendingTarget = pending?.let { action -> alarms.firstOrNull { it.id == action.alarmId } }
+    val pendingName = remember(pendingTarget, locale) {
+        pendingTarget?.let { alarmDescription(context, locale, it) }
+    }
+
+    if (pendingTarget != null && pendingName != null) {
+        when (pending) {
+            is PendingAlarmAction.Choose -> AlarmActionsDialog(
+                alarmDescription = pendingName,
                 onDuplicate = {
-                    actionsFor = null
+                    val id = pendingTarget.id
+                    pending = null
                     // Duplicating takes over the draft, so an open card with unsaved edits
                     // has to be settled first — the same question as opening another card.
                     leaveEditor {
                         expandedId = null
                         viewModel.duplicate(id, context.getString(R.string.duplicate_suffix)) { copy ->
+                            // No scroll: alarms are ordered by time, so the copy appears
+                            // right below its original, which is where the user is already
+                            // looking. Jumping to the top would hide the card just opened.
                             expandedId = copy.id
                             scope.launch {
-                                listState.animateScrollToItem(0)
                                 snackbar.currentSnackbarData?.dismiss()
                                 snackbar.showSnackbar(context.getString(R.string.duplicate_created))
                             }
                         }
                     }
                 },
-                onDelete = {
-                    actionsFor = null
-                    confirmDeleteFor = id
-                },
-                onDismiss = { actionsFor = null },
+                onDelete = { pending = PendingAlarmAction.ConfirmDelete(pendingTarget.id) },
+                onDismiss = { pending = null },
             )
-        }
-    }
 
-    confirmDeleteFor?.let { id ->
-        val target = alarms.firstOrNull { it.id == id }
-        if (target == null) {
-            confirmDeleteFor = null
-        } else {
-            ConfirmDeleteDialog(
-                alarmDescription = alarmDescription(context, locale, target),
+            is PendingAlarmAction.ConfirmDelete -> ConfirmDeleteDialog(
+                alarmDescription = pendingName,
                 onConfirm = {
-                    confirmDeleteFor = null
-                    // The card being deleted may be the open one; its draft has to go with it.
+                    val id = pendingTarget.id
+                    pending = null
+                    // The card being deleted may be the open one; its draft has to go with
+                    // it, or a later save would write the alarm back.
                     if (expandedId == id) {
                         expandedId = null
                         viewModel.endEdit()
                     }
                     viewModel.delete(id)
                 },
-                onDismiss = { confirmDeleteFor = null },
+                onDismiss = { pending = null },
             )
+
+            null -> Unit
         }
     }
 
@@ -318,8 +328,7 @@ fun AlarmListScreen(
         UnsavedChangesDialog(
             onSave = {
                 pendingLeave = null
-                saveOpenCard()
-                leave()
+                saveOpenCard(then = leave)
             },
             onDiscard = {
                 pendingLeave = null

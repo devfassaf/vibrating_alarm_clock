@@ -160,7 +160,7 @@ class AppDbMigrationTest {
         createVersion1Database()
 
         val db = openCurrent()
-        db.instanceDao().acknowledgeNotice(id = 3, at = 555)
+        db.instanceDao().acknowledgeNoticesOf(alarmId = 7, at = 555)
         val acknowledged = db.instanceDao().getById(3)
         db.close()
 

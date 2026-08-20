@@ -176,9 +176,11 @@ Useful facts:
   live notification, its channel, and whether it carries sound or vibration.
 - The reliability log is the app's own account of what happened:
   `select datetime(timestamp/1000,'unixepoch','localtime'),event,detail from reliability_log order by id desc limit 10;`
-- A full-screen intent launches `AlarmActivity` only when the screen is off/locked. With the
-  device unlocked and in use, Android shows a heads-up notification instead — that is
-  platform behaviour, not a bug.
+- With the device unlocked and in use, the platform demotes the full-screen intent to a
+  heads-up notification — but since v1.0.15 the service also starts `AlarmActivity` itself
+  (invariant 15), so a screen-on alarm brings the ringing screen up even mid-use. `SCREEN_SHOWN`
+  in the reliability log is the proof it appeared; `SCREEN_DENIED` is the service's start
+  being refused (distinct from `FGS_DENIED`, which is the ringing service itself).
 - The emulator does not vibrate and gives no meaningful audio, so *feel* and *loudness* are
   the two things only the real Galaxy can answer.
 

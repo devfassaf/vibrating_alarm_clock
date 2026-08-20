@@ -84,7 +84,7 @@ class FiringNotificationTest {
     @Test
     fun `the placeholder notification exists for both modes`() {
         listOf(true, false).forEach { turnScreenOn ->
-            val starting = notifications.buildStarting(turnScreenOn)
+            val starting = notifications.buildStarting(turnScreenOn, alarmId = 2, instanceId = 1)
             assertThat(starting.channelId).isEqualTo(
                 if (turnScreenOn) AlarmNotifications.CHANNEL_ALERTING else AlarmNotifications.CHANNEL_SILENT,
             )
