@@ -118,7 +118,7 @@ class AlarmNotifications(private val context: Context) {
      * full-screen intent when an entry is added — an intent that arrives with the update
      * is never looked at.
      */
-    fun buildStarting(turnScreenOn: Boolean, alarmId: Long = 0, instanceId: Long = 0): Notification =
+    fun buildStarting(turnScreenOn: Boolean, alarmId: Long, instanceId: Long): Notification =
         Notification.Builder(context, if (turnScreenOn) CHANNEL_ALERTING else CHANNEL_SILENT)
             .setSmallIcon(R.drawable.ic_alarm_notification)
             .setContentTitle(context.getString(R.string.notification_firing_text))
@@ -126,7 +126,7 @@ class AlarmNotifications(private val context: Context) {
             .setOngoing(true)
             .setShowWhen(false)
             .apply {
-                if (turnScreenOn && alarmId != 0L) {
+                if (turnScreenOn) {
                     setFullScreenIntent(
                         AlarmIntents.ringingActivityIntent(context, alarmId, instanceId),
                         true,
@@ -230,10 +230,16 @@ class AlarmNotifications(private val context: Context) {
      * other way (the user dismissed the alarm, another alarm preempted it) means someone
      * is awake and holding the phone, so last night's notice has served its purpose.
      */
+    /**
+     * The live ones: the ring in progress and the snooze waiting to ring again.
+     *
+     * Deliberately NOT the morning-after notices. This runs at every chain end, and a notice
+     * may only be retired by the two things invariant 14 names — "הבנתי", or the alarm
+     * ringing again — so that evidence of a missed morning cannot disappear on its own.
+     */
     fun cancelForAlarm(alarmId: Long) {
         manager.cancel(firingId(alarmId))
         manager.cancel(snoozedId(alarmId))
-        cancelNotices(alarmId)
     }
 
     fun cancelSnoozed(alarmId: Long) = manager.cancel(snoozedId(alarmId))

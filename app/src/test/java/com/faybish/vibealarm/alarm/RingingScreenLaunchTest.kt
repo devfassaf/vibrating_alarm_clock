@@ -70,15 +70,16 @@ class RingingScreenLaunchTest {
     }
 
     /**
-     * The service posts this before it has read the database — in the rare path where it has
-     * no ids yet, it must still be a legal notification rather than a crash on the alarm path.
+     * The ids are required parameters on purpose: with defaults, a refactor of the one real
+     * caller could silently post the adding notification without its full-screen intent —
+     * the exact measured failure (ring two with nothing on screen) this class documents.
      */
     @Test
-    fun `without ids the starting notification is still valid`() {
-        val starting = notifications.buildStarting(turnScreenOn = true)
+    fun `the starting notification always carries the ids it was built with`() {
+        val starting = notifications.buildStarting(turnScreenOn = true, alarmId = 3, instanceId = 1)
 
-        assertThat(starting.fullScreenIntent).isNull()
-        assertThat(starting.channelId).isEqualTo(AlarmNotifications.CHANNEL_ALERTING)
+        assertThat(shadowOf(starting.fullScreenIntent).savedIntent.getLongExtra(AlarmIntents.EXTRA_ALARM_ID, 0))
+            .isEqualTo(3)
     }
 
     /**

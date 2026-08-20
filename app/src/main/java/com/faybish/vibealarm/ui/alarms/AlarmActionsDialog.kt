@@ -23,6 +23,17 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.faybish.vibealarm.R
 
+/** Which question is being asked about one alarm, and about which alarm. */
+sealed interface PendingAlarmAction {
+    val alarmId: Long
+
+    /** The long-press menu: duplicate or delete. */
+    data class Choose(override val alarmId: Long) : PendingAlarmAction
+
+    /** "Delete this alarm?" — reached from the menu and from the card's own button. */
+    data class ConfirmDelete(override val alarmId: Long) : PendingAlarmAction
+}
+
 /**
  * What a long press on an alarm offers: copy it, or throw it away.
  *

@@ -343,6 +343,87 @@ class AlarmPipelineTest {
             assertThat(unattendedNotice()).isNull()
         }
 
+    /**
+     * The guard CLAUDE.md #14 shouts about, exercised end to end: acknowledging on fire is
+     * scoped to chains that already ended, because it runs from inside the ring. Without the
+     * `state = 3` filter the ringing chain stamps its own row read before it has anything to
+     * report, and the notice it produces at the end of this very test is born invisible.
+     */
+    @Test
+    fun `the chain that clears an old notice still produces its own`() = runTest {
+        val alarm = createAlarm(
+            ScheduleCodec.encode(
+                Schedule.Weekly(DayOfWeek.entries.toSet(), LocalTime.of(7, 0)),
+                vibrateOnlyAlarm(snoozeRepeatCount = 0),
+            ),
+        )
+        val firstInstance = repository.activeInstance(alarm.id)!!.id
+        runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, firstInstance)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, firstInstance)
+        assertThat(unreadNotices()).hasSize(1)
+
+        // Tomorrow's ring retires yesterday's notice — and then runs out unattended itself.
+        val secondInstance = repository.activeInstance(alarm.id)!!.id
+        runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, secondInstance)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, secondInstance)
+
+        val unread = unreadNotices()
+        assertThat(unread.map { it.instanceId }).containsExactly(secondInstance)
+    }
+
+    /** A week of not opening the app must not delete the evidence the dot points at. */
+    @Test
+    fun `pruning keeps a finished chain whose notice is still unread`() = runTest {
+        val alarm = createAlarm(vibrateOnlyAlarm(snoozeRepeatCount = 0))
+        val instanceId = repository.activeInstance(alarm.id)!!.id
+        runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, instanceId)
+        runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, instanceId)
+
+        // Make the row old enough to prune, then prune.
+        val row = db.instanceDao().getById(instanceId)!!
+        db.instanceDao().upsert(
+            row.copy(occurrenceEpochMillis = row.occurrenceEpochMillis - 30L * 24 * 60 * 60 * 1000),
+        )
+        repository.pruneOldInstances()
+        assertThat(unreadNotices()).hasSize(1)
+
+        // Read, it is fair game.
+        repository.acknowledgeNoticesOf(alarm.id)
+        repository.pruneOldInstances()
+        assertThat(db.instanceDao().getById(instanceId)).isNull()
+    }
+
+    /**
+     * The notification is per-alarm while the rows are per-instance, so reading the notice
+     * retires the whole set: acknowledging half would leave a banner standing for a dot
+     * that is already gone.
+     */
+    @Test
+    fun `acknowledging retires every unread notice of that alarm`() = runTest {
+        val alarm = createAlarm(
+            ScheduleCodec.encode(
+                Schedule.Weekly(DayOfWeek.entries.toSet(), LocalTime.of(7, 0)),
+                vibrateOnlyAlarm(snoozeRepeatCount = 0),
+            ),
+        )
+        repeat(2) {
+            val instanceId = repository.activeInstance(alarm.id)!!.id
+            runtime.handle(alarm.id, SessionEvent.Fire(Instant.now()), sink, instanceId)
+            runtime.handle(
+                alarm.id,
+                SessionEvent.PlaybackComplete(Instant.now()),
+                sink,
+                instanceId,
+            )
+            // Fire acknowledges the previous chain's notice, so only the newest is unread.
+        }
+        assertThat(unreadNotices()).hasSize(1)
+
+        repository.acknowledgeNoticesOf(alarm.id)
+
+        assertThat(unreadNotices()).isEmpty()
+    }
+
     /** The one button the user has: it must clear the row, not just the banner on screen. */
     @Test
     fun `acknowledging a notice clears the row it came from`() = runTest {
@@ -353,7 +434,7 @@ class AlarmPipelineTest {
         runtime.handle(alarm.id, SessionEvent.PlaybackComplete(Instant.now()), sink, instanceId)
         assertThat(unreadNotices()).hasSize(1)
 
-        repository.acknowledgeNotice(instanceId)
+        repository.acknowledgeNoticesOf(alarm.id)
 
         assertThat(unreadNotices()).isEmpty()
         assertThat(db.instanceDao().getById(instanceId)!!.endedReason)

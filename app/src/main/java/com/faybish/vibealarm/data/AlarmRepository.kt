@@ -90,11 +90,20 @@ class AlarmRepository(private val db: AppDb) {
     suspend fun unreadNotices(): List<AlarmInstanceEntity> =
         instanceDao.unreadNotices(EndedReason.NOTICE_WORTHY)
 
-    suspend fun acknowledgeNotice(instanceId: Long, at: Long = System.currentTimeMillis()) =
-        instanceDao.acknowledgeNotice(instanceId, at)
+    /** Every unread notice of this alarm — the notification they share is per-alarm. */
+    suspend fun acknowledgeNoticesOf(alarmId: Long, at: Long = System.currentTimeMillis()) =
+        instanceDao.acknowledgeNoticesOf(alarmId, at)
 
+    /** Only chains that ended already — this runs from inside a ring. */
     suspend fun acknowledgeNoticesFor(alarmId: Long, at: Long = System.currentTimeMillis()) =
         instanceDao.acknowledgeNoticesFor(alarmId, at)
+
+    /** @return how many notices were retired, so the caller knows whether to clear the dot. */
+    suspend fun acknowledgeNoticesSince(
+        alarmId: Long,
+        since: Long,
+        at: Long = System.currentTimeMillis(),
+    ): Int = instanceDao.acknowledgeNoticesSince(alarmId, since, at)
 
     suspend fun saveInstance(instance: AlarmInstanceEntity): Long {
         val id = instanceDao.upsert(instance)
@@ -104,5 +113,8 @@ class AlarmRepository(private val db: AppDb) {
     suspend fun clearActiveInstance(alarmId: Long) = instanceDao.deleteActiveForAlarm(alarmId)
 
     suspend fun pruneOldInstances() =
-        instanceDao.pruneDone(System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000)
+        instanceDao.pruneDone(
+            olderThan = System.currentTimeMillis() - 7L * 24 * 60 * 60 * 1000,
+            noticeReasons = EndedReason.NOTICE_WORTHY,
+        )
 }

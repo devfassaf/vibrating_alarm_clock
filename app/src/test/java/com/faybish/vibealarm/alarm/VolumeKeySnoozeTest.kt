@@ -78,14 +78,118 @@ class VolumeKeySnoozeTest {
     // --- whose choice it is ---
 
     @Test
-    fun `an alarm's own choice wins over the global setting`() {
-        assertThat(VolumeKeySnooze.enabledFor(perAlarm = false, globalDefault = true)).isFalse()
-        assertThat(VolumeKeySnooze.enabledFor(perAlarm = true, globalDefault = false)).isTrue()
+    fun `an alarm's own choice wins over the global setting`() = kotlinx.coroutines.runBlocking {
+        assertThat(VolumeKeySnooze.enabledFor(perAlarm = false) { true }).isFalse()
+        assertThat(VolumeKeySnooze.enabledFor(perAlarm = true) { false }).isTrue()
     }
 
     @Test
-    fun `an alarm with no opinion follows the global setting`() {
-        assertThat(VolumeKeySnooze.enabledFor(perAlarm = null, globalDefault = true)).isTrue()
-        assertThat(VolumeKeySnooze.enabledFor(perAlarm = null, globalDefault = false)).isFalse()
+    fun `an alarm with no opinion follows the global setting`() = kotlinx.coroutines.runBlocking {
+        assertThat(VolumeKeySnooze.enabledFor(perAlarm = null) { true }).isTrue()
+        assertThat(VolumeKeySnooze.enabledFor(perAlarm = null) { false }).isFalse()
+    }
+
+    /** The settings read runs on the alarm path, once per ring — only when actually needed. */
+    @Test
+    fun `an alarm that already decided never pays for the settings read`() =
+        kotlinx.coroutines.runBlocking {
+            var reads = 0
+
+            VolumeKeySnooze.enabledFor(perAlarm = true) { reads++; true }
+            VolumeKeySnooze.enabledFor(perAlarm = false) { reads++; true }
+            assertThat(reads).isEqualTo(0)
+
+            VolumeKeySnooze.enabledFor(perAlarm = null) { reads++; true }
+            assertThat(reads).isEqualTo(1)
+        }
+
+    // --- the alarm-stream watcher: the half that works while a ringtone plays ---
+
+    private fun audioManager(): android.media.AudioManager =
+        context.getSystemService(android.media.AudioManager::class.java)
+
+    private fun notifySettingsChanged() {
+        context.contentResolver.notifyChange(android.provider.Settings.System.CONTENT_URI, null)
+        org.robolectric.Shadows.shadowOf(android.os.Looper.getMainLooper()).idle()
+    }
+
+    @Test
+    fun `a stream level change while watching snoozes once`() {
+        val keys = keys()
+        keys.start(watchStream = true)
+
+        audioManager().setStreamVolume(android.media.AudioManager.STREAM_ALARM, 5, 0)
+        notifySettingsChanged()
+
+        assertThat(snoozes).isEqualTo(1)
+        keys.stop()
+    }
+
+    /**
+     * The observer hears every Settings.System write — brightness, rotation, all of it.
+     * Only the alarm stream actually moving may snooze; anything else at 6am is noise.
+     */
+    @Test
+    fun `an unrelated settings change is not a press`() {
+        val keys = keys()
+        keys.start(watchStream = true)
+
+        notifySettingsChanged()
+        notifySettingsChanged()
+
+        assertThat(snoozes).isEqualTo(0)
+        keys.stop()
+    }
+
+    /** After stop, the restore of the stream must not snooze an alarm that already ended. */
+    @Test
+    fun `a stream change after stop is ignored`() {
+        val keys = keys()
+        keys.start(watchStream = true)
+        keys.stop()
+
+        audioManager().setStreamVolume(android.media.AudioManager.STREAM_ALARM, 2, 0)
+        notifySettingsChanged()
+
+        assertThat(snoozes).isEqualTo(0)
+    }
+
+    /**
+     * The app's own mid-window ringtone stop restores the stream. That restore must be
+     * invisible to the watcher, or a ringtone shorter than the pattern snoozes the alarm
+     * the moment the sound ends — cutting the vibration short, which is the exact split
+     * invariant 12 protects.
+     */
+    @Test
+    fun `our own stream restore does not read as a press`() {
+        val keys = keys()
+        keys.start(watchStream = true)
+
+        keys.withStreamChangeIgnored {
+            audioManager().setStreamVolume(android.media.AudioManager.STREAM_ALARM, 1, 0)
+            notifySettingsChanged()
+        }
+        notifySettingsChanged()
+
+        assertThat(snoozes).isEqualTo(0)
+
+        // And the watcher is alive again afterwards: a real press still snoozes.
+        audioManager().setStreamVolume(android.media.AudioManager.STREAM_ALARM, 6, 0)
+        notifySettingsChanged()
+        assertThat(snoozes).isEqualTo(1)
+        keys.stop()
+    }
+
+    /** A vibration-only ring registers no observer at all — nothing to misread, no cost. */
+    @Test
+    fun `without the stream watch a stream change does nothing`() {
+        val keys = keys()
+        keys.start(watchStream = false)
+
+        audioManager().setStreamVolume(android.media.AudioManager.STREAM_ALARM, 4, 0)
+        notifySettingsChanged()
+
+        assertThat(snoozes).isEqualTo(0)
+        keys.stop()
     }
 }

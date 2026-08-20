@@ -29,6 +29,22 @@ class ReliabilityLogger(
         const val BOOT_RECEIVED = "BOOT_RECEIVED"
         const val ARMED = "ARMED"
         const val FIRED = "FIRED"
+
+        /**
+         * The ringing screen reached the user. Logged by the screen itself because neither
+         * launch route reports success: a full-screen intent the platform declines is
+         * declined silently, and a refused background activity start throws nothing. Without
+         * this the log cannot answer "did ring two show anything?" on a phone we cannot
+         * attach a debugger to.
+         */
+        const val SCREEN_SHOWN = "SCREEN_SHOWN"
+
+        /**
+         * Starting the ringing screen from the service threw. Distinct from FGS_DENIED —
+         * that one means the ringing *service* was refused, i.e. a possibly silent morning,
+         * and a benign overlay refusal must not masquerade as it in the log the user reads.
+         */
+        const val SCREEN_DENIED = "SCREEN_DENIED"
         const val SNOOZED = "SNOOZED"
         const val AUTO_DISMISSED = "AUTO_DISMISSED"
         const val UNATTENDED = "UNATTENDED"

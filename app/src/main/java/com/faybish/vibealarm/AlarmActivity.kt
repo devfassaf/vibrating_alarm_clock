@@ -12,6 +12,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.lifecycle.lifecycleScope
 import com.faybish.vibealarm.alarm.AlarmIntents
+import com.faybish.vibealarm.alarm.AlarmRingingService
+import com.faybish.vibealarm.alarm.VolumeKeySnooze
+import com.faybish.vibealarm.data.ReliabilityLogger
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.data.InstanceState
 import com.faybish.vibealarm.domain.SessionEvent
@@ -68,20 +71,33 @@ class AlarmActivity : ComponentActivity() {
     private fun bind(intent: Intent) {
         alarmId = intent.getLongExtra(AlarmIntents.EXTRA_ALARM_ID, 0)
         instanceId = intent.getLongExtra(AlarmIntents.EXTRA_INSTANCE_ID, 0)
+        AppGraph.reliabilityLogger.log(
+            ReliabilityLogger.SCREEN_SHOWN,
+            "alarm=$alarmId instance=$instanceId",
+        )
 
         watchJob?.cancel()
         watchJob = lifecycleScope.launch {
             val loaded = AppGraph.repository.getAlarm(alarmId)
             alarm = loaded
             // The alarm may defer the volume-key behavior to the global setting.
-            volumeKeysSnooze = loaded?.volumeKeysSnooze
-                ?: AppGraph.settings.volumeKeysSnooze.first()
+            // One rule, one implementation: the service reads the same helper.
+            volumeKeysSnooze = VolumeKeySnooze.enabledFor(loaded?.volumeKeysSnooze) {
+                AppGraph.settings.volumeKeysSnooze.first()
+            }
 
             // A vibration-only pattern ends on its own and the session auto-snoozes with
             // nobody touching the phone. When that happens this screen has to go away
             // too, otherwise it sits there showing an alarm that already stopped.
             AppGraph.repository.observeActiveInstance(alarmId).collect { instance ->
-                if (instance == null || instance.state != InstanceState.FIRING) finish()
+                val live = instance != null && instance.state == InstanceState.FIRING
+                // The service posts the notification that carries the full-screen intent
+                // before it has run the Fire transition, so this screen can open while the
+                // row still says SNOOZED. Finishing on that first emission closed the screen
+                // the platform had just granted, milliseconds before the ring began. The
+                // service's own record of what it is playing is what distinguishes "not
+                // ringing" from "about to".
+                if (!live && AlarmRingingService.playingAlarmId != alarmId) finish()
             }
         }
     }

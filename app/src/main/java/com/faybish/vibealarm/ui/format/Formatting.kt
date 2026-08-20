@@ -1,8 +1,6 @@
 package com.faybish.vibealarm.ui.format
 
 import android.content.Context
-import com.faybish.vibealarm.data.AlarmEntity
-import com.faybish.vibealarm.data.ScheduleCodec
 import android.text.format.DateFormat
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
@@ -12,6 +10,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.pluralStringResource
 import com.faybish.vibealarm.R
+import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.data.ScheduleCodec
 import com.faybish.vibealarm.domain.Schedule
 import com.faybish.vibealarm.domain.ScheduleSummarizer
 import com.faybish.vibealarm.domain.ScheduleSummary
@@ -158,14 +158,6 @@ private fun Context.join(first: String, second: String): String = getString(
 )
 
 /**
- * What the confirmation bubble says after a save: which day, what time, and how long
- * from now.
- *
- * All three, because each one alone can be misread — "in 6 hours" hides which morning,
- * and "Saturday 07:30" hides that the alarm is switched off. An alarm the user believes
- * is set and is not is the one failure this app cannot afford.
- */
-/**
  * Names one alarm in a sentence, for the dialogs that act on it.
  *
  * A long press lands on a list where alarms differ by fifteen minutes, and both actions it
@@ -178,6 +170,14 @@ fun alarmDescription(context: Context, locale: Locale, alarm: AlarmEntity): Stri
     return if (alarm.label.isBlank()) time else "$time · ${alarm.label}"
 }
 
+/**
+ * What the confirmation bubble says after a save: which day, what time, and how long
+ * from now.
+ *
+ * All three, because each one alone can be misread — "in 6 hours" hides which morning,
+ * and "Saturday 07:30" hides that the alarm is switched off. An alarm the user believes
+ * is set and is not is the one failure this app cannot afford.
+ */
 fun triggerAnnouncement(
     context: Context,
     locale: Locale,

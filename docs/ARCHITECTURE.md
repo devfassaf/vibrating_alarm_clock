@@ -41,6 +41,7 @@ discipline.
 | `AlarmStreamVolume` | reaching the per-alarm level without turning other apps down |
 | `VolumeRamp` | the ringtone's climb from quiet |
 | `AlertSelection` | sound and vibration as two switches, with "neither" unrepresentable |
+| `AlarmDuplicate` | naming a copy: the "(copy)" marker, added once, in the app's language |
 | `update/` | version comparison and whether now is a good moment to offer an update |
 
 ## The alarm chain
@@ -146,8 +147,12 @@ another's slot: firing `100000+`, snoozed `200000+`, missed `300000+`, unattende
 `AlarmListScreen` mirrors Google Clock's alarm tab: cards that expand in place. An open card
 edits a **draft** held in `AlarmListViewModel`; nothing reaches the database until Save, and
 every way out of the card (collapse, opening another, the back gesture) goes through the
-unsaved-changes question. The switch and delete are the exceptions — they act immediately,
-because both mean one thing at the moment they are tapped.
+unsaved-changes question. The switch is the exception — it acts immediately, because it
+means one thing at the moment it is tapped. Delete asks first, from both routes (the card's
+button and the long-press menu), naming the alarm: deletion cannot be undone, and a long
+press on a list is the easiest gesture in the app to aim wrongly. A long press on a row
+offers duplicate/delete (`AlarmActionsDialog`); the copy is created switched off so it
+cannot preempt its original, and opens as the draft.
 
 Saving switches the alarm on, closes the card, returns the list to the top, and answers
 with a snackbar naming the day, the time and the time left (`TriggerDescriptor` +
@@ -170,7 +175,13 @@ icon, and remembers which one was last used in `SettingsStore.timeInputByKeyboar
 `AlarmActivity` is the full-screen ringing UI, shown over the lock screen, and only for
 alarms configured to turn the screen on. Its two actions must be **dragged**, not tapped
 (`DragToConfirm`, 60% of the track): a phone picked up half asleep produces taps nobody
-meant. Volume keys snooze while it has focus — with the screen off no app can see them.
+meant. Volume keys snooze through two mechanisms, because neither covers the job alone:
+`onKeyDown` here while the screen has focus, and `alarm/VolumeKeySnooze` — a media session
+held for the alerting window, which receives the keys with the screen off, paired with a
+watch on the alarm stream's level for the case where a ringtone is playing and the platform
+routes the keys to the stream instead. The one measured dead spot: screen dark *and* a
+ringtone playing, where the press reaches neither the app nor the stream. The keys always
+snooze, never dismiss, and a press spends one of the alarm's configured snoozes.
 
 `docs/index.html` is the landing page, served by GitHub Pages from `main` + `/docs`, and it
 is what the app's "home page" button opens (`UpdateAssets.siteUrl()`). That Pages setting is
@@ -206,7 +217,7 @@ opened again, nothing is re-armed. That is why it is presented as a condition, n
 
 ## Tests
 
-401 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
+411 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
 `domain/`; Robolectric tests for the wiring that a unit test cannot see — the real pipeline
 against AlarmManager and Room, the Room migration from a hand-built version-1 file, the
 notification wording in both languages, and that silent mode does not silence the engines.

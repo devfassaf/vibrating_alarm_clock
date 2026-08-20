@@ -189,14 +189,19 @@ class AlarmNotificationsTest {
         notifications.showMissed(alarm, at("2026-08-15T07:30:00"))
         assertThat(shadowOf(manager()).allNotifications).hasSize(1)
 
-        notifications.cancelForAlarm(alarm.id)
+        notifications.cancelNotices(alarm.id)
 
         assertThat(shadowOf(manager()).allNotifications).isEmpty()
     }
 
-    /** Reached when the user dismisses the alarm: they are awake and holding the phone. */
+    /**
+     * cancelForAlarm runs at every chain end — including the auto-dismissal that has just
+     * posted this very notice. It may take only the live notifications: a notice survives
+     * everything except "הבנתי" and the alarm ringing again, or the evidence of a missed
+     * morning could disappear on its own while its reader slept.
+     */
     @Test
-    fun `cancelling an alarm's notifications takes the notice with them`() {
+    fun `cancelling an alarm's live notifications leaves the notice standing`() {
         val notifications = AlarmNotifications(localized("iw"))
         notifications.ensureChannels()
         notifications.showUnattended(
@@ -207,6 +212,9 @@ class AlarmNotificationsTest {
         )
 
         notifications.cancelForAlarm(alarm.id)
+        assertThat(shadowOf(manager()).allNotifications).hasSize(1)
+
+        notifications.cancelNotices(alarm.id)
         assertThat(shadowOf(manager()).allNotifications).isEmpty()
     }
 
@@ -225,7 +233,7 @@ class AlarmNotificationsTest {
         }
         assertThat(shadowOf(manager()).allNotifications).hasSize(2)
 
-        notifications.cancelForAlarm(alarm.id)
+        notifications.cancelNotices(alarm.id)
         val left = shadowOf(manager()).allNotifications.single()
         assertThat(left.text()).startsWith("חול ·")
     }

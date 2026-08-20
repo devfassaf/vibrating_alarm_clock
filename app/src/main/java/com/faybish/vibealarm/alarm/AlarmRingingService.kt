@@ -22,6 +22,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -43,9 +44,17 @@ class AlarmRingingService : Service() {
 
     /** Waits out the alerting window; cleared before it dispatches completion. */
     private var timerJob: Job? = null
+
+    /** Read from the playback scope; written on the main thread by onStartCommand. */
+    @Volatile
     private var currentStartId: Int = 0
 
-    /** Volume keys as snooze, for the rings where nothing is on screen to press. */
+    /**
+     * Volume keys as snooze, for the rings where nothing is on screen to press. Volatile
+     * because it is created on the playback scope and cleared from whichever thread stops
+     * the outputs; a stale read leaks an active media session and a settings observer.
+     */
+    @Volatile
     private var volumeKeys: VolumeKeySnooze? = null
 
     private val runtime: SessionRuntime get() = AppGraph.sessionRuntime
@@ -86,13 +95,15 @@ class AlarmRingingService : Service() {
         try {
             startActivity(AlarmIntents.ringingActivity(this, alarm.id, instanceId))
         } catch (e: Exception) {
-            // Background activity starts can be refused. The full-screen intent is still
-            // attached to the notification, so this is a second chance, not the only one.
             logger.log(
-                ReliabilityLogger.FGS_DENIED,
+                ReliabilityLogger.SCREEN_DENIED,
                 "alarm=${alarm.id} startActivity ${e.javaClass.simpleName}: ${e.message}",
             )
         }
+        // A refused background activity start throws nothing — the platform drops it and
+        // logs to logcat — so this catch is not the evidence. The proof that the screen came
+        // up is logged by AlarmActivity itself, which is what makes the reliability log able
+        // to answer "did ring two show anything?" on a phone we cannot attach to.
     }
 
     override fun onCreate() {
@@ -105,11 +116,17 @@ class AlarmRingingService : Service() {
      * One press, one snooze — dispatched on the service's own scope so it survives the
      * media session being torn down by the transition it starts.
      */
-    private fun snoozeFromVolumeKey(alarm: AlarmEntity, instanceId: Long) {
-        val alarmId = alarm.id
-        scope.launch {
+    private fun snoozeFromVolumeKey(alarmId: Long, instanceId: Long) {
+        val startId = currentStartId
+        // The app scope, not the service scope, for the reason AlarmActivity.dispatch gives:
+        // this transition stops the vibrator and arms the snooze, and stopping the service
+        // must not cancel it halfway between Persist and ArmExact.
+        AppGraph.appScope.launch {
             runtime.handle(alarmId, SessionEvent.UserSnooze(Instant.now()), sink, instanceId)
-            stopSelf(currentStartId)
+            // Only if this is still our window. While that transition waited on the shared
+            // mutex another alarm may have started ringing on this same service, and stopping
+            // it by the newest start id would kill that ring before it ever fired.
+            if (playingAlarmId == alarmId) stopSelf(startId)
         }
     }
 
@@ -239,14 +256,22 @@ class AlarmRingingService : Service() {
             // Whether the keys snooze is the alarm's own choice, falling back to the global
             // setting. Started per window and released with the outputs, so between rings
             // the keys go back to being volume keys.
-            if (VolumeKeySnooze.enabledFor(
-                    perAlarm = alarm.volumeKeysSnooze,
-                    globalDefault = AppGraph.settings.volumeKeysSnooze.first(),
-                )
-            ) {
+            val keysSnooze = VolumeKeySnooze.enabledFor(alarm.volumeKeysSnooze) {
+                AppGraph.settings.volumeKeysSnooze.first()
+            }
+            // isActive: the settings read above suspends, and a window cancelled inside it
+            // would otherwise leave a session nothing ever stops.
+            if (keysSnooze && isActive) {
+                val alarmId = alarm.id
+                volumeKeys?.stop()
                 volumeKeys = VolumeKeySnooze(this@AlarmRingingService) {
-                    snoozeFromVolumeKey(alarm, instanceId)
-                }.also { it.start() }
+                    snoozeFromVolumeKey(alarmId, instanceId)
+                }.also {
+                    // The stream watch earns its keep only when a ringtone is playing: that
+                    // is the case where the platform gives the keys to the alarm stream
+                    // instead of to the session.
+                    it.start(watchStream = plan.soundMs > 0)
+                }
             }
 
             // A ringtone shorter than the pattern is silenced on its own schedule; a
@@ -255,7 +280,7 @@ class AlarmRingingService : Service() {
             if (plan.stopSoundBeforeWindowEnds) {
                 launch {
                     delay(plan.soundMs)
-                    sound.stop()
+                    stopSoundQuietly()
                 }
             }
 
@@ -275,13 +300,26 @@ class AlarmRingingService : Service() {
         }
     }
 
+    /**
+     * Stops the ringtone without its own stream restore counting as a volume-key press.
+     *
+     * Putting the alarm stream back to the level it had before the alarm raised it looks
+     * exactly like the user pressing volume-down. Reached here mid-window when the ringtone
+     * is shorter than the vibration pattern: an unguarded stop snoozed the alarm the moment
+     * the sound ended and cut the pattern short, which is the split that invariant 12 exists
+     * to protect.
+     */
+    private fun stopSoundQuietly() {
+        val keys = volumeKeys
+        if (keys == null) sound.stop() else keys.withStreamChangeIgnored { sound.stop() }
+    }
+
     /** Silences output without giving up the wake lock. */
     private fun stopOutputsOnly() {
         timerJob?.cancel()
         timerJob = null
-        // Before the engines: stopping the sound puts the alarm stream back to the level it
-        // had before the alarm raised it, and the watcher would read that restore as the
-        // user reaching for the volume keys — snoozing an alarm that just ended.
+        // Released before the engines: once it is gone the stream restore below cannot be
+        // mistaken for a key press at all.
         volumeKeys?.stop()
         volumeKeys = null
         vibration.stop()

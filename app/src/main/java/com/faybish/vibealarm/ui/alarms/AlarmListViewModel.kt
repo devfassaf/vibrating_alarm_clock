@@ -185,20 +185,19 @@ class AlarmListViewModel : ViewModel() {
     ) {
         viewModelScope.launch {
             val original = repository.getAlarm(alarmId) ?: return@launch
-            val now = System.currentTimeMillis()
             val id = repository.saveAlarm(
                 original.copy(
                     id = 0,
                     enabled = false,
                     label = duplicateLabel(original.label, copySuffix),
-                    createdAt = now,
-                    updatedAt = now,
+                    createdAt = System.currentTimeMillis(),
                 ),
             )
             val copy = repository.getAlarm(id) ?: return@launch
-            // Through the scheduler like any other save: it arms nothing for a disabled
-            // alarm, and going around it is how an alarm ends up armed twice.
-            scheduler.onAlarmSaved(copy)
+            // No scheduler call: a freshly inserted disabled row is unarmed by construction —
+            // no PendingIntent, no instance — and onAlarmSaved would take the mutex the
+            // ringing path shares, serializing a mere copy against a live ring for nothing.
+            // Saving the card is what will arm it, through the scheduler, like every save.
             beginEdit(copy)
             onCreated(copy)
         }
@@ -242,18 +241,20 @@ class AlarmListViewModel : ViewModel() {
         onToggled: (AlarmEntity, Instant?) -> Unit = { _, _ -> },
     ) {
         viewModelScope.launch {
+            val actionAt = System.currentTimeMillis()
             if (!enabled) silenceIfRinging(alarmId)
             scheduler.onAlarmToggled(alarmId, enabled)
+            // After the scheduler: cutting a live ring short still lets that chain commit
+            // AUTO_DISMISSED, and its "you slept through it" notice describes a morning the
+            // user has just handled by hand. Scoped by time so an unread notice from an
+            // earlier morning survives — invariant 14 allows only "הבנתי" and the next ring
+            // to clear one of those.
+            if (!enabled) retireNoticeFromThisAction(alarmId, since = actionAt)
             val fresh = repository.getAlarm(alarmId) ?: return@launch
             onToggled(fresh, nextTrigger(fresh))
         }
     }
 
-    /**
-     * Ends a chain that is waiting on a snooze, exactly as dismissing the ring would: the
-     * armed snooze is replaced by this alarm's next real occurrence (or the alarm switches
-     * itself off, if it was a one-time one).
-     */
     /**
      * Marks a notice read: the banner goes, and so does the notification behind it — which
      * is the only thing that clears the red dot on the launcher icon. One button, both,
@@ -262,11 +263,19 @@ class AlarmListViewModel : ViewModel() {
      */
     fun acknowledgeNotice(notice: MissedNotice) {
         viewModelScope.launch {
-            repository.acknowledgeNotice(notice.instanceId)
+            // Every unread notice of that alarm, not just this row: they share one
+            // notification and therefore one red dot, so retiring half of them would leave a
+            // banner standing with nothing behind it — the same confusion in reverse.
+            repository.acknowledgeNoticesOf(notice.alarmId)
             AppGraph.notifications.cancelNotices(notice.alarmId)
         }
     }
 
+    /**
+     * Ends a chain that is waiting on a snooze, exactly as dismissing the ring would: the
+     * armed snooze is replaced by this alarm's next real occurrence (or the alarm switches
+     * itself off, if it was a one-time one).
+     */
     fun cancelSnooze(
         ring: SnoozedRing,
         onCancelled: (AlarmEntity, Instant?) -> Unit = { _, _ -> },
@@ -287,6 +296,10 @@ class AlarmListViewModel : ViewModel() {
     fun delete(alarmId: Long) {
         viewModelScope.launch {
             silenceIfRinging(alarmId)
+            // The notices too: deleting the alarm cascades its instance rows away, so the
+            // banner is gone — a notification left behind would be a red dot the app can no
+            // longer explain, which is the state the banner exists to prevent.
+            AppGraph.notifications.cancelNotices(alarmId)
             scheduler.onAlarmDeleted(alarmId)
         }
     }
@@ -298,13 +311,24 @@ class AlarmListViewModel : ViewModel() {
      * service would keep playing to the end of its window — up to half an hour for a
      * ringtone — for an alarm the user has just turned off or thrown away.
      */
-    private suspend fun silenceIfRinging(alarmId: Long) {
+    private fun silenceIfRinging(alarmId: Long) {
         AlarmServiceStarter.stop(AppGraph.deviceProtectedContext, alarmId)
         AppGraph.notifications.cancelForAlarm(alarmId)
-        // That call takes the morning-after notices with it, so the rows behind them have
-        // to go too: a banner left describing an alarm the user has just switched off is a
-        // second copy of a message whose notification no longer exists.
-        repository.acknowledgeNoticesFor(alarmId)
+    }
+
+    /**
+     * Retires a notice the user's own switch-off just produced, and nothing older.
+     *
+     * Cutting a ring short can still let that chain commit its ending and report "you slept
+     * through it" for a morning the user has just cancelled by hand — so it is scoped by
+     * time, and only runs after the scheduler has dropped the live instance. An unread
+     * notice from an earlier morning must survive: per invariant 14 only "הבנתי" and the
+     * alarm ringing again may retire one.
+     */
+    private suspend fun retireNoticeFromThisAction(alarmId: Long, since: Long) {
+        if (repository.acknowledgeNoticesSince(alarmId, since) > 0) {
+            AppGraph.notifications.cancelNotices(alarmId)
+        }
     }
 
     /** Feels the alarm's own pattern at the currently chosen intensity. */

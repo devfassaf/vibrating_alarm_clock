@@ -81,25 +81,13 @@ object AlarmIntents {
      * Full-screen / content intent. Always an activity PendingIntent: launching an
      * activity from a notification via a receiver or service is blocked on Android 12+.
      */
-    fun ringingActivityIntent(context: Context, alarmId: Long, instanceId: Long): PendingIntent {
-        val intent = Intent(context, AlarmActivity::class.java).apply {
-            data = dataUri(alarmId, "ring")
-            putExtra(EXTRA_ALARM_ID, alarmId)
-            putExtra(EXTRA_INSTANCE_ID, instanceId)
-            // No CLEAR_TASK: the screen can now be started twice for one ring — once by the
-            // platform honouring the full-screen intent and once by the service, which does
-            // not know whether the platform did. CLEAR_TASK made the second start tear down
-            // the instance the first had just put on screen; without it a duplicate arrives
-            // as onNewIntent on the singleInstance activity, which is a no-op that rebinds.
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        }
-        return PendingIntent.getActivity(
+    fun ringingActivityIntent(context: Context, alarmId: Long, instanceId: Long): PendingIntent =
+        PendingIntent.getActivity(
             context,
             requestCode(alarmId, OFFSET_SHOW),
-            intent,
+            ringingActivity(context, alarmId, instanceId),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-    }
 
     /**
      * The same screen, started by us instead of by the platform.
@@ -115,6 +103,10 @@ object AlarmIntents {
             data = dataUri(alarmId, "ring")
             putExtra(EXTRA_ALARM_ID, alarmId)
             putExtra(EXTRA_INSTANCE_ID, instanceId)
+            // No CLEAR_TASK, for either route: one ring can start this screen twice — the
+            // platform honouring the full-screen intent, and the service which cannot know
+            // whether the platform did — and CLEAR_TASK made the second start tear down what
+            // the first had just shown. singleInstance turns the duplicate into onNewIntent.
             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         }
 
