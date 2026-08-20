@@ -14,8 +14,8 @@ android {
         applicationId = "com.faybish.vibealarm"
         minSdk = 26
         targetSdk = 36
-        versionCode = 10013
-        versionName = "1.0.13"
+        versionCode = 10014
+        versionName = "1.0.14"
     }
 
     signingConfigs {
