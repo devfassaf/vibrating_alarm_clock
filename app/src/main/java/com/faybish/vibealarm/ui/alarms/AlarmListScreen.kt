@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.ui.format.currentLocale
+import com.faybish.vibealarm.ui.format.alarmDescription
 import com.faybish.vibealarm.ui.format.triggerAnnouncement
 import com.faybish.vibealarm.ui.update.UpdateDialogHost
 import com.faybish.vibealarm.ui.update.UpdateViewModel
@@ -87,6 +88,12 @@ fun AlarmListScreen(
 
     // What to do once the unsaved-changes question has been answered.
     var pendingLeave by remember { mutableStateOf<(() -> Unit)?>(null) }
+
+    // The row being held, and the one whose deletion is being confirmed. Ids rather than
+    // entities: the list can change underneath a dialog, and acting on a stale copy would
+    // duplicate or delete something the user is no longer looking at.
+    var actionsFor by remember { mutableStateOf<Long?>(null) }
+    var confirmDeleteFor by remember { mutableStateOf<Long?>(null) }
 
     val listState = rememberLazyListState()
     val snackbar = remember { SnackbarHostState() }
@@ -242,6 +249,7 @@ fun AlarmListScreen(
                         onPickPattern = { onPickPatternFor(alarm.id) },
                         onPreviewVibration = { viewModel.previewVibration(shown) },
                         onPreviewSound = { viewModel.previewSound(shown) },
+                        onLongPress = { actionsFor = alarm.id },
                         onDelete = {
                             expandedId = null
                             viewModel.endEdit()
@@ -250,6 +258,59 @@ fun AlarmListScreen(
                     )
                 }
             }
+        }
+    }
+
+    actionsFor?.let { id ->
+        val target = alarms.firstOrNull { it.id == id }
+        if (target == null) {
+            actionsFor = null
+        } else {
+            AlarmActionsDialog(
+                alarmDescription = alarmDescription(context, locale, target),
+                onDuplicate = {
+                    actionsFor = null
+                    // Duplicating takes over the draft, so an open card with unsaved edits
+                    // has to be settled first — the same question as opening another card.
+                    leaveEditor {
+                        expandedId = null
+                        viewModel.duplicate(id, context.getString(R.string.duplicate_suffix)) { copy ->
+                            expandedId = copy.id
+                            scope.launch {
+                                listState.animateScrollToItem(0)
+                                snackbar.currentSnackbarData?.dismiss()
+                                snackbar.showSnackbar(context.getString(R.string.duplicate_created))
+                            }
+                        }
+                    }
+                },
+                onDelete = {
+                    actionsFor = null
+                    confirmDeleteFor = id
+                },
+                onDismiss = { actionsFor = null },
+            )
+        }
+    }
+
+    confirmDeleteFor?.let { id ->
+        val target = alarms.firstOrNull { it.id == id }
+        if (target == null) {
+            confirmDeleteFor = null
+        } else {
+            ConfirmDeleteDialog(
+                alarmDescription = alarmDescription(context, locale, target),
+                onConfirm = {
+                    confirmDeleteFor = null
+                    // The card being deleted may be the open one; its draft has to go with it.
+                    if (expandedId == id) {
+                        expandedId = null
+                        viewModel.endEdit()
+                    }
+                    viewModel.delete(id)
+                },
+                onDismiss = { confirmDeleteFor = null },
+            )
         }
     }
 

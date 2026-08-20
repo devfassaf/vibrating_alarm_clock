@@ -1,6 +1,8 @@
 package com.faybish.vibealarm.ui.format
 
 import android.content.Context
+import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.data.ScheduleCodec
 import android.text.format.DateFormat
 import androidx.annotation.PluralsRes
 import androidx.annotation.StringRes
@@ -163,6 +165,19 @@ private fun Context.join(first: String, second: String): String = getString(
  * and "Saturday 07:30" hides that the alarm is switched off. An alarm the user believes
  * is set and is not is the one failure this app cannot afford.
  */
+/**
+ * Names one alarm in a sentence, for the dialogs that act on it.
+ *
+ * A long press lands on a list where alarms differ by fifteen minutes, and both actions it
+ * offers are hard to take back — so the dialog has to say which alarm it is holding. The
+ * time comes first because that is how the list is read; the label follows when there is
+ * one, and an unlabelled alarm is simply its time.
+ */
+fun alarmDescription(context: Context, locale: Locale, alarm: AlarmEntity): String {
+    val time = formatTime(context, ScheduleCodec.minutesToTime(alarm.timeMinutesOfDay), locale)
+    return if (alarm.label.isBlank()) time else "$time · ${alarm.label}"
+}
+
 fun triggerAnnouncement(
     context: Context,
     locale: Locale,

@@ -65,6 +65,102 @@ class DraftSaveTest {
         AppGraph.repository.getAlarm(id)!!
     }
 
+    // --- duplicating ---
+
+    /**
+     * The copy arrives switched off on purpose. Two enabled alarms on the same minute
+     * preempt each other: one silences the other, the silenced one is recorded PREEMPTED,
+     * and the morning after reports a missed alarm that never failed. Off means the copy
+     * cannot do that before the user has moved it.
+     */
+    @Test
+    fun `a duplicate is created switched off`() {
+        val original = createAlarm(enabled = true, time = LocalTime.of(7, 30))
+
+        viewModel.duplicate(original.id, copySuffix = "(עותק)")
+        awaitUntil("the copy exists") { allAlarms().size == 2 }
+
+        val copy = allAlarms().single { it.id != original.id }
+        assertThat(copy.enabled).isFalse()
+        assertThat(storedAlarm(original.id).enabled).isTrue()
+    }
+
+    @Test
+    fun `a duplicate carries every setting of the original`() {
+        val original = runBlocking {
+            val id = AppGraph.repository.saveAlarm(
+                AlarmEntity(
+                    label = "שבת",
+                    timeMinutesOfDay = ScheduleCodec.timeToMinutes(LocalTime.of(6, 45)),
+                    enabled = true,
+                    volume = 0.42f,
+                    intensityScale = 0.7f,
+                    turnScreenOn = false,
+                    autoSilenceSeconds = 45,
+                    snoozeIntervalMinutes = 7,
+                    snoozeRepeatCount = 4,
+                    soundRampUp = true,
+                ),
+            )
+            AppGraph.repository.getAlarm(id)!!
+        }
+
+        viewModel.duplicate(original.id, copySuffix = "(עותק)")
+        awaitUntil("the copy exists") { allAlarms().size == 2 }
+
+        val copy = allAlarms().single { it.id != original.id }
+        assertThat(copy.timeMinutesOfDay).isEqualTo(original.timeMinutesOfDay)
+        assertThat(copy.volume).isEqualTo(0.42f)
+        assertThat(copy.intensityScale).isEqualTo(0.7f)
+        assertThat(copy.turnScreenOn).isFalse()
+        assertThat(copy.autoSilenceSeconds).isEqualTo(45)
+        assertThat(copy.snoozeIntervalMinutes).isEqualTo(7)
+        assertThat(copy.snoozeRepeatCount).isEqualTo(4)
+        assertThat(copy.soundRampUp).isTrue()
+        assertThat(copy.label).isEqualTo("שבת (עותק)")
+    }
+
+    /** It opens for editing, which is the reason to duplicate in the first place. */
+    @Test
+    fun `a duplicate opens as the draft`() {
+        val original = createAlarm(enabled = true)
+
+        viewModel.duplicate(original.id, copySuffix = "(עותק)")
+        awaitUntil("the draft is the copy") {
+            viewModel.draft.value?.let { it.id != original.id } == true
+        }
+
+        assertThat(viewModel.draft.value!!.enabled).isFalse()
+        assertThat(viewModel.draftDirty.value).isFalse()
+    }
+
+    /** Off means unarmed: a copy that armed itself would ring beside the original. */
+    @Test
+    fun `a duplicate arms nothing`() {
+        val original = createAlarm(enabled = true)
+        val armedBefore = shadowOf(alarmManager()).scheduledAlarms.size
+
+        viewModel.duplicate(original.id, copySuffix = "(עותק)")
+        awaitUntil("the copy exists") { allAlarms().size == 2 }
+
+        assertThat(shadowOf(alarmManager()).scheduledAlarms).hasSize(armedBefore)
+    }
+
+    @Test
+    fun `duplicating an alarm that is already gone does nothing`() {
+        viewModel.duplicate(alarmId = 404, copySuffix = "(עותק)")
+        shadowOf(Looper.getMainLooper()).idle()
+
+        assertThat(allAlarms()).isEmpty()
+    }
+
+    private fun allAlarms(): List<AlarmEntity> = runBlocking {
+        AppGraph.repository.getAllAlarms()
+    }
+
+    private fun alarmManager(): android.app.AlarmManager =
+        application.getSystemService(android.app.AlarmManager::class.java)
+
     @Test
     fun `saving an edit writes it and switches the alarm on`() {
         val alarm = createAlarm(enabled = false)
