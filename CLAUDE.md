@@ -91,6 +91,11 @@ The one thing added *after* the fact is allowed to be informational: the
     **`acknowledgeNoticesFor` must never touch a live chain** — it runs from inside a ring,
     and without the `state = 3` filter the ringing chain marks its own row read before it
     has anything to report, so the notice it goes on to create is invisible from birth.
+    The rows are the truth and the notification is a projection of them: on every app open
+    `retireOrphanedNotices` cancels a notice notification with no unread row behind it
+    (`NoticeReconciliation`), because older versions removed rows without cancelling and
+    left launcher badges nothing could clear. The reconciler must never touch the firing
+    or snoozed id ranges — those belong to the live ring.
 
 15. **A full-screen intent is only weighed when the notification is *added*.** It must ride
     on `buildStarting` — the post that `startForeground` makes — and not only on the

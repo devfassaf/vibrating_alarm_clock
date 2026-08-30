@@ -137,7 +137,10 @@ launcher icon. Each is mirrored by a banner in the alarm list built from the sam
 `instances` (`endedReason` in AUTO_DISMISSED/MISSED/PREEMPTED, `noticeAckAt IS NULL`),
 "got it" writes `noticeAckAt` **and** calls `cancelNotices`, and the alarm ringing again
 does both from `ShowFiringNotification`. `acknowledgeNoticesFor` is scoped to `state = 3`
-because it runs from inside a ring.
+because it runs from inside a ring. The reverse direction is reconciled on app open:
+`retireOrphanedNotices` (decision in `domain/NoticeReconciliation`) cancels any notice
+notification with no unread row behind it — healing badges that older versions orphaned by
+pruning rows or deleting alarms without cancelling.
 
 Notification ids are per-alarm (`base + alarmId`) so one alarm's notice can never take
 another's slot: firing `100000+`, snoozed `200000+`, missed `300000+`, unattended `400000+`.
@@ -217,7 +220,7 @@ opened again, nothing is re-armed. That is why it is presented as a condition, n
 
 ## Tests
 
-411 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
+418 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
 `domain/`; Robolectric tests for the wiring that a unit test cannot see — the real pipeline
 against AlarmManager and Room, the Room migration from a hand-built version-1 file, the
 notification wording in both languages, and that silent mode does not silence the engines.

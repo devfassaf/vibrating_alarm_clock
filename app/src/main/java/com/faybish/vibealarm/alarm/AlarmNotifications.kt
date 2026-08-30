@@ -7,6 +7,7 @@ import android.content.Context
 import android.os.Build
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
+import com.faybish.vibealarm.domain.NoticeReconciliation
 import com.faybish.vibealarm.ui.format.NoticeText
 import com.faybish.vibealarm.ui.format.formatTime
 import java.time.Instant
@@ -243,6 +244,21 @@ class AlarmNotifications(private val context: Context) {
     }
 
     fun cancelSnoozed(alarmId: Long) = manager.cancel(snoozedId(alarmId))
+
+    /**
+     * Cancels every morning-after notification that no unread row backs any more.
+     *
+     * Run when the app opens. Older versions removed rows without cancelling — the weekly
+     * prune, deleting an alarm — and the launcher kept a badge that nothing inside the app
+     * explained or could clear. The rows are the truth; a notification without one is a
+     * leftover, whatever removed its row.
+     */
+    fun retireOrphanedNotices(unreadAlarmIds: Set<Long>) {
+        val posted = runCatching { manager.activeNotifications.map { it.id } }
+            .getOrDefault(emptyList())
+        NoticeReconciliation.orphanedNoticeIds(posted, unreadAlarmIds)
+            .forEach(manager::cancel)
+    }
 
     /**
      * Both morning-after notices, together.

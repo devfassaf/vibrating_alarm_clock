@@ -218,6 +218,57 @@ class AlarmNotificationsTest {
         assertThat(shadowOf(manager()).allNotifications).isEmpty()
     }
 
+    /**
+     * NoticeReconciliation mirrors this class's id layout without importing it (pure domain
+     * vs android). If the bases ever drift the reconciler cancels the wrong notifications —
+     * or none — so the mirror is pinned here, next to the layout it copies.
+     */
+    @Test
+    fun `the reconciler's id layout is this class's id layout`() {
+        val notifications = AlarmNotifications(localized("iw"))
+        notifications.ensureChannels()
+        notifications.showUnattended(
+            alarm = alarm,
+            firstRingAt = at("2026-08-15T07:30:00"),
+            endedAt = at("2026-08-15T07:40:00"),
+            ringCount = 1,
+        )
+        notifications.showMissed(alarm.copy(id = 7), at("2026-08-15T07:30:00"))
+
+        val posted = shadowOf(manager()).allNotifications
+        // alarm.id = 2 → unattended slot; 7 → missed slot, exactly where the reconciler looks.
+        assertThat(
+            com.faybish.vibealarm.domain.NoticeReconciliation.orphanedNoticeIds(
+                postedIds = listOf(
+                    com.faybish.vibealarm.domain.NoticeReconciliation.UNATTENDED_ID_BASE + 2,
+                    com.faybish.vibealarm.domain.NoticeReconciliation.MISSED_ID_BASE + 7,
+                ),
+                unreadAlarmIds = emptySet(),
+            ),
+        ).hasSize(2)
+        assertThat(posted).hasSize(2)
+
+        notifications.retireOrphanedNotices(unreadAlarmIds = emptySet())
+        assertThat(shadowOf(manager()).allNotifications).isEmpty()
+    }
+
+    /** The other direction: rows still unread keep their notifications. */
+    @Test
+    fun `reconciling keeps a notice that is still unread`() {
+        val notifications = AlarmNotifications(localized("iw"))
+        notifications.ensureChannels()
+        notifications.showUnattended(
+            alarm = alarm,
+            firstRingAt = at("2026-08-15T07:30:00"),
+            endedAt = at("2026-08-15T07:40:00"),
+            ringCount = 1,
+        )
+
+        notifications.retireOrphanedNotices(unreadAlarmIds = setOf(alarm.id))
+
+        assertThat(shadowOf(manager()).allNotifications).hasSize(1)
+    }
+
     /** Two alarms, two slots: silencing one must not erase the other's record. */
     @Test
     fun `each alarm keeps its own notice`() {
