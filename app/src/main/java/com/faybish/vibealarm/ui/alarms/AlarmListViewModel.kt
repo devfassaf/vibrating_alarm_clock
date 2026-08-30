@@ -74,6 +74,19 @@ class AlarmListViewModel : ViewModel() {
         combine(repository.observeSnoozedInstances(), repository.observeAlarms(), ::snoozedRings)
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
+    init {
+        // Reconcile once per app open, against a fresh read rather than the flow: a stale
+        // emission could cancel a notification whose row committed a moment later. Even
+        // then the row wins — the banner still shows and "הבנתי" re-clears — but fresh is
+        // simply correct. This is what heals a phone that older versions left with a badge
+        // no banner explains: rows pruned or alarms deleted without their notification.
+        viewModelScope.launch {
+            AppGraph.notifications.retireOrphanedNotices(
+                repository.unreadNotices().map { it.alarmId }.toSet(),
+            )
+        }
+    }
+
     /** Mornings that went wrong and have not been read yet — the red dot, explained. */
     val notices: StateFlow<List<MissedNotice>> =
         combine(repository.observeUnreadNotices(), repository.observeAlarms(), ::missedNotices)
