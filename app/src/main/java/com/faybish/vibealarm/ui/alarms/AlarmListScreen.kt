@@ -46,6 +46,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.faybish.vibealarm.R
 import com.faybish.vibealarm.data.AlarmEntity
 import com.faybish.vibealarm.ui.format.currentLocale
+import com.faybish.vibealarm.ui.components.rememberMinuteNow
 import com.faybish.vibealarm.ui.format.alarmDescription
 import com.faybish.vibealarm.ui.format.triggerAnnouncement
 import com.faybish.vibealarm.ui.update.UpdateDialogHost
@@ -76,6 +77,12 @@ fun AlarmListScreen(
     val patternNames by viewModel.patternNames.collectAsStateWithLifecycle()
     val snoozed by viewModel.snoozed.collectAsStateWithLifecycle()
     val notices by viewModel.notices.collectAsStateWithLifecycle()
+    val nextRingAt by viewModel.nextRingAt.collectAsStateWithLifecycle()
+
+    // One clock for every countdown on this screen: the header, the cards, the snooze
+    // banners. It refreshes on each minute boundary and on every return to the app, so
+    // "in 18 minutes" can no longer freeze at whatever was true when the screen composed.
+    val now by rememberMinuteNow()
     val draft by viewModel.draft.collectAsStateWithLifecycle()
     val dirty by viewModel.draftDirty.collectAsStateWithLifecycle()
 
@@ -190,9 +197,12 @@ fun AlarmListScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            // Above everything: a morning that already went wrong outranks one that is
-            // still coming, and this is the answer to the red dot that brought the user
-            // here in the first place.
+            item(key = "next-alarm-header") {
+                NextAlarmHeader(nextRingAt = nextRingAt, now = now)
+            }
+
+            // A morning that already went wrong outranks one that is still coming, and
+            // this is the answer to the red dot that brought the user here.
             items(notices, key = { "notice-${it.instanceId}" }) { notice ->
                 MissedNoticeBanner(
                     notice = notice,
@@ -203,6 +213,7 @@ fun AlarmListScreen(
             // A snooze that is about to ring again is the next most time-critical thing.
             items(snoozed, key = { "snoozed-${it.instanceId}" }) { ring ->
                 SnoozedBanner(
+                    now = now,
                     label = ring.label,
                     ringsAt = ring.ringsAt,
                     remainingSnoozes = ring.remainingSnoozes,
@@ -227,7 +238,8 @@ fun AlarmListScreen(
                         draft = cardDraft,
                         dirty = dirty && cardDraft != null,
                         schedule = viewModel.scheduleOf(shown),
-                        nextTrigger = viewModel.nextTrigger(alarm),
+                        nextTrigger = viewModel.nextTrigger(alarm, now),
+                        now = now,
                         patternName = shown.patternId?.let { patternNames[it] },
                         expanded = expandedId == alarm.id,
                         onExpandToggle = {

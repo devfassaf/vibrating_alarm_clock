@@ -10,6 +10,7 @@ import com.faybish.vibealarm.data.ScheduleCodec
 import com.faybish.vibealarm.data.SnoozedRing
 import com.faybish.vibealarm.data.MissedNotice
 import com.faybish.vibealarm.data.missedNotices
+import com.faybish.vibealarm.data.nextRing
 import com.faybish.vibealarm.data.snoozedRings
 import com.faybish.vibealarm.data.VibrationPatternEntity
 import com.faybish.vibealarm.data.hasSameEditsAs
@@ -87,6 +88,15 @@ class AlarmListViewModel : ViewModel() {
         }
     }
 
+    /**
+     * When the phone rings next, across every alarm — armed snoozes included, because the
+     * header answers "when will it ring", not "when is the next scheduled occurrence".
+     */
+    val nextRingAt: StateFlow<Instant?> =
+        combine(repository.observeArmedInstances(), repository.observeAlarms()) { armed, alarms ->
+            nextRing(armed, alarms, Instant.now())
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     /** Mornings that went wrong and have not been read yet — the red dot, explained. */
     val notices: StateFlow<List<MissedNotice>> =
         combine(repository.observeUnreadNotices(), repository.observeAlarms(), ::missedNotices)
@@ -117,11 +127,12 @@ class AlarmListViewModel : ViewModel() {
 
     fun scheduleOf(alarm: AlarmEntity): Schedule = repository.scheduleOf(alarm)
 
-    fun nextTrigger(alarm: AlarmEntity): Instant? = NextOccurrenceCalculator.nextTrigger(
-        schedule = scheduleOf(alarm),
-        after = Instant.now(),
-        zone = ZoneId.systemDefault(),
-    )
+    fun nextTrigger(alarm: AlarmEntity, now: Instant = Instant.now()): Instant? =
+        NextOccurrenceCalculator.nextTrigger(
+            schedule = scheduleOf(alarm),
+            after = now,
+            zone = ZoneId.systemDefault(),
+        )
 
     // --- editing ---
 

@@ -17,6 +17,8 @@
     <string name="duplicate_suffix">(copy)</string>
     <string name="duplicate_created">Copy created, switched off — move it and press Save</string>
     <string name="delete_confirm_title">Delete this alarm?</string>
+    <string name="next_alarm_in">Next alarm %1$s</string>
+    <string name="next_alarm_none">All alarms are off</string>
     <string name="action_cancel">Cancel</string>
     <string name="action_got_it">Got it</string>
     <string name="action_cancel_snooze">Cancel snooze</string>

@@ -89,6 +89,7 @@ fun AlarmCard(
     dirty: Boolean,
     schedule: Schedule,
     nextTrigger: Instant?,
+    now: Instant,
     patternName: String?,
     expanded: Boolean,
     onExpandToggle: () -> Unit,
@@ -156,7 +157,7 @@ fun AlarmCard(
                         )
                     } else if (alarm.enabled && nextTrigger != null) {
                         Text(
-                            text = timeUntilText(nextTrigger),
+                            text = timeUntilText(nextTrigger, now),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary,
                         )
