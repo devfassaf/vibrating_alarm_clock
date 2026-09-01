@@ -147,7 +147,13 @@ another's slot: firing `100000+`, snoozed `200000+`, missed `300000+`, unattende
 
 ## The UI
 
-`AlarmListScreen` mirrors Google Clock's alarm tab: cards that expand in place. An open card
+`AlarmListScreen` mirrors Google Clock's alarm tab: cards that expand in place. At its top
+sits the next-ring header — `data/NextRing.nextRing` picks the earliest armed trigger
+(SCHEDULED and SNOOZED instances, so a pending snooze wins), falling back to computing from
+the enabled alarms. Every countdown on the screen (header, cards, snooze banners) reads one
+shared clock, `ui/components/MinuteTicker.rememberMinuteNow()`: a lifecycle-aware state that
+refreshes on each wall-clock minute and on every return to the foreground, so no countdown
+can freeze at whatever was true when the screen composed. An open card
 edits a **draft** held in `AlarmListViewModel`; nothing reaches the database until Save, and
 every way out of the card (collapse, opening another, the back gesture) goes through the
 unsaved-changes question. The switch is the exception — it acts immediately, because it
@@ -220,7 +226,7 @@ opened again, nothing is re-armed. That is why it is presented as a condition, n
 
 ## Tests
 
-418 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
+427 JVM tests, `./gradlew testDebugUnitTest`, no device needed. Unit tests for everything in
 `domain/`; Robolectric tests for the wiring that a unit test cannot see — the real pipeline
 against AlarmManager and Room, the Room migration from a hand-built version-1 file, the
 notification wording in both languages, and that silent mode does not silence the engines.

@@ -76,6 +76,10 @@ interface InstanceDao {
     @Query("SELECT * FROM instances WHERE state = 2 ORDER BY nextActionEpochMillis")
     fun observeSnoozed(): Flow<List<AlarmInstanceEntity>>
 
+    /** Everything armed — scheduled and snoozed — for the "next alarm in…" header. */
+    @Query("SELECT * FROM instances WHERE state IN (0, 2)")
+    fun observeArmed(): Flow<List<AlarmInstanceEntity>>
+
     @Query("SELECT * FROM instances WHERE id = :id")
     suspend fun getById(id: Long): AlarmInstanceEntity?
 

@@ -107,7 +107,8 @@ fun scheduleSummaryText(schedule: Schedule): String {
 
 /** "in 7 h 20 min" — how long until the alarm rings. */
 @Composable
-fun timeUntilText(trigger: Instant): String = timeUntil(LocalContext.current, trigger)
+fun timeUntilText(trigger: Instant, now: Instant = Instant.now()): String =
+    timeUntil(LocalContext.current, trigger, now)
 
 /**
  * Built from pluralized parts rather than one format string, because Hebrew inflects the

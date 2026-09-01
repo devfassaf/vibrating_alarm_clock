@@ -82,6 +82,8 @@ class AlarmRepository(private val db: AppDb) {
 
     fun observeSnoozedInstances(): Flow<List<AlarmInstanceEntity>> = instanceDao.observeSnoozed()
 
+    fun observeArmedInstances(): Flow<List<AlarmInstanceEntity>> = instanceDao.observeArmed()
+
     suspend fun getInstance(id: Long): AlarmInstanceEntity? = instanceDao.getById(id)
 
     fun observeUnreadNotices(): Flow<List<AlarmInstanceEntity>> =

@@ -14,8 +14,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -25,7 +23,6 @@ import com.faybish.vibealarm.R
 import com.faybish.vibealarm.ui.format.formatInstantTime
 import com.faybish.vibealarm.ui.format.timeUntil
 import java.time.Instant
-import kotlinx.coroutines.delay
 
 /**
  * "This alarm comes back at 07:35 — call it off?"
@@ -35,11 +32,13 @@ import kotlinx.coroutines.delay
  * you had finished with. This is that decision, available now, at the top of the screen
  * where it cannot be missed.
  *
- * The absolute time is what the sentence leads with: a countdown alone goes stale the moment
- * the screen is left open, and being wrong about *when* is worse than being coarse.
+ * The absolute time is what the sentence leads with, and the countdown beside it reads the
+ * screen's shared minute clock — one tick for every countdown on the list, so none of them
+ * can freeze at whatever was true when the screen composed.
  */
 @Composable
 fun SnoozedBanner(
+    now: Instant,
     label: String,
     ringsAt: Instant,
     remainingSnoozes: Int?,
@@ -47,13 +46,6 @@ fun SnoozedBanner(
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    // Recomputed on a slow tick so a screen left open does not keep claiming "in 3 minutes".
-    val now by produceState(initialValue = Instant.now()) {
-        while (true) {
-            value = Instant.now()
-            delay(TICK_MILLIS)
-        }
-    }
 
     Card(
         modifier = modifier.fillMaxWidth(),
@@ -96,5 +88,3 @@ fun SnoozedBanner(
         }
     }
 }
-
-private const val TICK_MILLIS = 20_000L
