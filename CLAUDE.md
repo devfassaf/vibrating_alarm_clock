@@ -188,6 +188,14 @@ Useful facts:
   being refused (distinct from `FGS_DENIED`, which is the ringing service itself).
 - The emulator does not vibrate and gives no meaningful audio, so *feel* and *loudness* are
   the two things only the real Galaxy can answer.
+- Hostile-state testing: `cmd battery unplug` + `settings put global low_power 1` is battery
+  saver; `cmd notification set_dnd priority` is the DND real users have (alarms exempt),
+  while `set_dnd on` is **Total Silence** (`INTERRUPTION_FILTER_NONE`) — the one mode where
+  the OS itself mutes alarms for every app (`ignored_app_ops` in dumpsys vibrator_manager);
+  that is what the reliability screen's DND row detects, not something the app can override.
+  Deep Doze on this AVD sticks at QUICK_DOZE_DELAY; `settings put global
+  device_idle_constants quick_doze_delay_to_idle=1000` lets `force-idle deep` reach IDLE.
+  Restore with `cmd battery reset`, `low_power 0`, `set_dnd off`, and delete the constants.
 
 ## Releasing
 
