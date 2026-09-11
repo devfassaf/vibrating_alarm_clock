@@ -72,14 +72,21 @@ The one thing added *after* the fact is allowed to be informational: the
     ringtone only; the pattern governs the vibration and plays **once**, never looping to
     fill a long ringtone. The alerting window is the longer of the two (`AlertWindow`), so
     neither can cut the other short.
-13. **The alarm stream may be raised, never lowered, and the chosen loudness is honoured
-    either way.** The stream is shared with every other alarm clock on the phone
-    (`AlarmStreamVolume`): lowering it to reach a quiet per-alarm volume would play the
-    built-in clock's alarm at our level too. Too quiet, and it is raised to the level the
-    user chose; louder than needed, and the player is attenuated instead — by the real dB
-    difference between the two indices (`getStreamVolumeDb`), because volume indices are
-    dB-spaced while `MediaPlayer.setVolume` is linear. Neither the ringer mode nor the
-    phone's own volume may change how loud a configured alarm comes out.
+13. **The chosen volume is delivered by the player, and the shared stream is only ever
+    raised.** The slider means *how far below the loudest alarm this phone can play*:
+    `AlarmStreamVolume.RANGE_DB` at the bottom, nothing at the top, spread **evenly** in dB
+    (`requestedDb`), because a slider linear in amplitude spends its top third doing nothing
+    audible. That level is delivered by `MediaPlayer.setVolume` — the one gain no other app
+    can hear — and the stream, shared with every other alarm clock on the phone, is raised
+    only far enough to give the player headroom and handed back in `stop()`; lowering it
+    would play the built-in clock's alarm at our level too. Two things are therefore
+    forbidden: **snapping the chosen value to a stream index** (with 7 steps that made
+    65%–78% one identical sound) and **trusting `getStreamVolumeDb` unchecked** — a phone
+    reporting the same figure for every step then produced no attenuation at all, and 10%
+    came out as loud as 100%. `AlarmStreamVolume.Curve.of` is that check; a device that
+    fails it loses its say and the stream goes to its maximum instead. Neither the ringer
+    mode nor the phone's own volume may change how loud a configured alarm comes out —
+    measured, not assumed: 30% rings at −21 dB below maximum, silent mode included.
 
 14. **A notice the user cannot clear from inside the app is a red dot with no explanation.**
     The morning-after notices (`showUnattended`, `showMissed`) put a badge on the launcher
