@@ -38,7 +38,7 @@ discipline.
 | `TriggerDescriptor` | how the next ring is named (today / tomorrow / weekday / date) |
 | `AutoSilence`, `SnoozeRepeats`, `SnoozeInterval` | the bounds on every free-choice number |
 | `AlertWindow` | how long one ring lasts when sound and vibration disagree |
-| `AlarmStreamVolume` | reaching the per-alarm level without turning other apps down |
+| `AlarmStreamVolume` | delivering the chosen loudness without turning other apps down |
 | `VolumeRamp` | the ringtone's climb from quiet |
 | `AlertSelection` | sound and vibration as two switches, with "neither" unrepresentable |
 | `AlarmDuplicate` | naming a copy: the "(copy)" marker, added once, in the app's language |
@@ -100,16 +100,19 @@ pure reducer meets Android. Two orderings are load-bearing: `Persist` before `Ar
 as short pulses (PWM); amplitude 255 is the hardware ceiling, and the system's own vibration
 strength scales everything below it.
 
-`SoundEngine` plays on `STREAM_ALARM` with `USAGE_ALARM`. Per-alarm volume needs the stream
-to be at least as loud as the level asked for, so the stream is **raised when too quiet and
-never lowered** (`AlarmStreamVolume`) — it is shared with every other alarm clock on the
-phone — and the remaining attenuation is the player's own volume, computed from the platform's
-real dB values for the two indices (`getStreamVolumeDb`, API 28+) because indices are
-dB-spaced while `setVolume` is linear. Either way the alarm comes out at the level the user
-chose, whatever the phone's own volume happens to be. Sources are a fallback
-chain — the chosen ringtone, the system default, then a bundled asset — because before first
-unlock the user's own files are unreadable. The optional ramp steps the player's volume too,
-never the stream.
+`SoundEngine` plays on `STREAM_ALARM` with `USAGE_ALARM`. The per-alarm volume is delivered
+by the **player's own gain** — the one knob nobody else can hear — measured against the
+loudest alarm the phone will play: the slider spans `AlarmStreamVolume.RANGE_DB` evenly, so
+100% is that maximum and 0% is 30 dB below it. The shared stream is only given the headroom
+that needs, **raised when too quiet and never lowered**, and handed back when the ring ends.
+How far it has to be raised comes from the platform's dB figure per index
+(`getStreamVolumeDb`, API 28+) — but only after `AlarmStreamVolume.Curve` has checked that
+the device really answered; a phone that reports the same figure for every step, or none at
+all, loses its say and the stream simply goes to its maximum. Either way the alarm comes out
+at the level the user chose, whatever the phone's own volume happens to be. Sources are a
+fallback chain — the chosen ringtone, the system default, then a bundled asset — because
+before first unlock the user's own files are unreadable. The optional ramp steps the player's
+volume too, never the stream.
 
 Two alarm apps can therefore ring together, sound included. The vibrator cannot be shared:
 one device, and each new request interrupts the previous one, so whichever app vibrates last
